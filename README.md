@@ -344,3 +344,5 @@ function MyAddon:InitializeSettings()
     MyAddon.settingsPages:Register()
 end
 ```
+
+<!-- Workflow triggered: 2025-06-16T10:45:58.347298 -->
