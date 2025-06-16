@@ -3,7 +3,7 @@
 ## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Notes: Common functionality for Peavers addons
 ## Author: Peavers
-## Version: 1.0.6
+## Version: 1.0.7
 ## X-Curse-Project-ID: 1259953
 ## SavedVariables: PeaversCommonsDB
 ## Category-enUS: Peavers
