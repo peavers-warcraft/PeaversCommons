@@ -1,4 +1,4 @@
-## Interface: 110107
+## Interface: 110205
 ## Title: |cff3abdf7Peavers|rCommons
 ## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Notes: Common functionality for Peavers addons
