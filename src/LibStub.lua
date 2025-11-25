@@ -27,6 +27,9 @@ if not LibStub or (LibStub.minor and LibStub.minor < MINOR) then
         return self.libs[major]
     end
     
+    -- Make LibStub callable: LibStub("LibName") as shorthand for LibStub:GetLibrary("LibName")
+    setmetatable(LibStub, { __call = LibStub.GetLibrary })
+
     -- Register this lib globally
     _G[MAJOR] = LibStub
 end
