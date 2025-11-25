@@ -9,13 +9,13 @@ Write-Host "Deploying addon: $ADDON_NAME" -ForegroundColor Green
 # Possible WoW installation locations on Windows
 $WOW_PATHS = @(
     "${env:ProgramFiles(x86)}\World of Warcraft"
-    "${env:ProgramFiles}\World of Warcraft" 
-    "${env:ProgramFiles(x86)}\World of Warcraft\_retail_"
-    "${env:ProgramFiles}\World of Warcraft\_retail_"
+    "${env:ProgramFiles}\World of Warcraft"
+    "${env:ProgramFiles(x86)}\World of Warcraft\_beta_"
+    "${env:ProgramFiles}\World of Warcraft\_beta_"
     "${env:ProgramFiles(x86)}\World of Warcraft\_classic_"
     "${env:ProgramFiles}\World of Warcraft\_classic_"
     "C:\World of Warcraft"
-    "C:\World of Warcraft\_retail_"
+    "C:\World of Warcraft\_beta_"
     "C:\World of Warcraft\_classic_"
     "C:\Program Files (x86)\World of Warcraft"
     "C:\Program Files\World of Warcraft"
@@ -28,32 +28,32 @@ $Deployed = $false
 # Function to deploy to a specific WoW path
 function Deploy-ToPath {
     param($WowPath)
-    
+
     $InterfacePath = Join-Path $WowPath "Interface\AddOns"
     $TargetPath = Join-Path $InterfacePath $ADDON_NAME
-    
+
     if (-not (Test-Path $InterfacePath)) {
         return $false
     }
-    
+
     Write-Host "Found WoW installation at: $WowPath" -ForegroundColor Yellow
-    
+
     # Remove existing addon if present
     if (Test-Path $TargetPath) {
         Write-Host "Removing existing addon..." -ForegroundColor Yellow
         Remove-Item -Path $TargetPath -Recurse -Force
     }
-    
+
     # Copy addon files
     Write-Host "Copying addon files..." -ForegroundColor Yellow
     Copy-Item -Path . -Destination $TargetPath -Recurse -Force
-    
+
     # Remove deployment scripts and git files from target
     Remove-Item -Path "$TargetPath\local_deploy.sh" -ErrorAction SilentlyContinue
     Remove-Item -Path "$TargetPath\local_deploy.ps1" -ErrorAction SilentlyContinue
     Remove-Item -Path "$TargetPath\.git" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -Path "$TargetPath\.gitignore" -ErrorAction SilentlyContinue
-    
+
     Write-Host "✓ Deployed to: $TargetPath" -ForegroundColor Green
     return $true
 }
