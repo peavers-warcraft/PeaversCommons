@@ -1,17 +1,21 @@
 ## Interface: 120000
+
 ## Title: |cff3abdf7Peavers|rCommons
-## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Notes: Common functionality for Peavers addons
 ## Author: Peavers
 ## Version: 1.0.10
-## X-Curse-Project-ID: 1259953
-## SavedVariables: PeaversCommonsDB
+
+## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Category-enUS: Peavers
 
-# First load LibStub
+## X-Website: https://peavers.io
+## X-Source-Code: https://github.com/peavers-warcraft/PeaversCommons
+## X-Curse-Project-ID: 1259953
+
+## SavedVariables: PeaversCommonsDB
+
 src\LibStub.lua
 
-# Core components
 src\Core\Core.lua
 src\Core\Config.lua
 src\Core\Events.lua
@@ -22,7 +26,9 @@ src\Core\ConfigUIUtils.lua
 src\Core\ConfigManager.lua
 src\Core\Patrons.lua
 src\Core\BarStyles.lua
+
 src\Utils\Utils.lua
+
 src\UI\SupportUI.lua
 src\UI\PatronsUI.lua
 src\UI\SettingsUI.lua
@@ -30,13 +36,10 @@ src\UI\BarManager.lua
 src\UI\StatBar.lua
 src\UI\TitleBar.lua
 
-# Templates
 src\Templates\patrons_template.lua
 src\Templates\settings_template.lua
 src\Templates\simplified_patrons.lua
 
-# Initialize sample patrons (comment out in production if needed)
 src\Core\PatronsInit.lua
 
-# Initialize PeaversCommons greeting
 src\Init.lua
