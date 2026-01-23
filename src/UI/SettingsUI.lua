@@ -123,8 +123,9 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
         -- This is the CRITICAL line to make it appear in Options > Addons
         Settings.RegisterAddOnCategory(category)
 
-        -- Store the category
+        -- Store the category and its ID
         addonRef.directCategory = category
+        addonRef.directCategoryID = category:GetID()
         addonRef.directPanel = mainPanel
         addonRef.supportPanel = mainPanel  -- For PatronsUI compatibility
 
@@ -133,6 +134,7 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
         local globalAddon = _G[addonName]
         if globalAddon then
             globalAddon.directCategory = category
+            globalAddon.directCategoryID = category:GetID()
             globalAddon.directPanel = mainPanel
             globalAddon.supportPanel = mainPanel
         end
@@ -141,10 +143,12 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
         if settingsPanel then
             local settingsCategory = Settings.RegisterCanvasLayoutSubcategory(category, settingsPanel, settingsPanel.name)
             addonRef.directSettingsCategory = settingsCategory
+            addonRef.directSettingsCategoryID = settingsCategory:GetID()
 
             -- Store this in the global addon reference too for slash commands
             if globalAddon then
                 globalAddon.directSettingsCategory = settingsCategory
+                globalAddon.directSettingsCategoryID = settingsCategory:GetID()
             end
         end
 
