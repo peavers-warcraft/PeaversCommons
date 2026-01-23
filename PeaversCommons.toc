@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120001
 
 ## Title: |cff3abdf7Peavers|rCommons
 ## Notes: Common functionality for Peavers addons
