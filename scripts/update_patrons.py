@@ -22,6 +22,7 @@ from pathlib import Path
 
 PATREON_API_BASE = "https://www.patreon.com/api/oauth2/v2"
 LUA_OUTPUT_PATH = Path(__file__).parent.parent / "src" / "Core" / "PatronsInit.lua"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1465399335813644389/yzIFVLupMKtm9VbzLzJQfOnw8crtRx-qgOvT7nmwhoGS11I8mqp0rJfxO57gPN4HLRqR"
 
 
 def fetch_json(url: str, access_token: str) -> dict:
@@ -213,6 +214,70 @@ def compute_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
+def send_discord_notification(new_patrons: list[tuple[str, str]]) -> bool:
+    """
+    Send a Discord webhook notification for new patrons.
+
+    Args:
+        new_patrons: List of tuples (name, tier) for new patrons
+
+    Returns:
+        True if notification sent successfully, False otherwise
+    """
+    if not new_patrons or not DISCORD_WEBHOOK_URL:
+        return False
+
+    # Build the message
+    if len(new_patrons) == 1:
+        name, tier = new_patrons[0]
+        tier_label = "patron" if tier == "gold" else "follower"
+        title = "New Patron!"
+        description = f"**{name}** just became a {tier_label}!"
+    else:
+        title = f"{len(new_patrons)} New Patrons!"
+        lines = []
+        for name, tier in new_patrons:
+            tier_label = "patron" if tier == "gold" else "follower"
+            lines.append(f"• **{name}** ({tier_label})")
+        description = "\n".join(lines)
+
+    # Discord embed payload
+    payload = {
+        "embeds": [{
+            "title": title,
+            "description": description,
+            "color": 16766720,  # Gold color
+            "footer": {
+                "text": "Peavers Addons - Patreon"
+            }
+        }]
+    }
+
+    try:
+        request = Request(
+            DISCORD_WEBHOOK_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urlopen(request, timeout=10) as response:
+            return response.status == 204 or response.status == 200
+    except Exception as e:
+        print(f"Failed to send Discord notification: {e}", file=sys.stderr)
+        return False
+
+
+def parse_existing_patrons(content: str) -> set[str]:
+    """Parse patron names from existing PatronsInit.lua content."""
+    patrons = set()
+    # Match lines like: { name = "Name", tier = "gold" },
+    import re
+    pattern = r'\{\s*name\s*=\s*"([^"]+)"'
+    for match in re.finditer(pattern, content):
+        patrons.add(match.group(1))
+    return patrons
+
+
 def main():
     # Get credentials from environment
     access_token = os.environ.get("PATREON_ACCESS_TOKEN")
@@ -240,9 +305,23 @@ def main():
     # Generate Lua content
     lua_content = generate_lua(paying_patrons, free_followers)
 
-    # Check if content has changed
+    # Build current patron set for comparison
+    current_patrons = set(paying_patrons + free_followers)
+
+    # Check if content has changed and detect new patrons
+    new_patron_list = []
     if LUA_OUTPUT_PATH.exists():
         existing_content = LUA_OUTPUT_PATH.read_text()
+        existing_patrons = parse_existing_patrons(existing_content)
+
+        # Find new patrons
+        for name in paying_patrons:
+            if name not in existing_patrons:
+                new_patron_list.append((name, "gold"))
+        for name in free_followers:
+            if name not in existing_patrons:
+                new_patron_list.append((name, "silver"))
+
         # Compare excluding the auto-generated comment lines (which might have timestamps)
         existing_lines = [l for l in existing_content.split("\n") if not l.startswith("--")]
         new_lines = [l for l in lua_content.split("\n") if not l.startswith("--")]
@@ -255,6 +334,9 @@ def main():
                 with open(github_output, "a") as f:
                     f.write("changed=false\n")
             return
+    else:
+        # All patrons are "new" if file doesn't exist, but don't notify for initial setup
+        print("Creating initial patron list (no Discord notification for initial setup)")
 
     # Ensure parent directory exists
     LUA_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -262,6 +344,16 @@ def main():
     # Write the new content
     LUA_OUTPUT_PATH.write_text(lua_content)
     print(f"Updated {LUA_OUTPUT_PATH}")
+
+    # Send Discord notification for new patrons
+    if new_patron_list:
+        print(f"\nNew patrons detected: {len(new_patron_list)}")
+        for name, tier in new_patron_list:
+            print(f"  - {name} ({tier})")
+        if send_discord_notification(new_patron_list):
+            print("Discord notification sent successfully!")
+        else:
+            print("Failed to send Discord notification", file=sys.stderr)
 
     # Write to GitHub output if available
     github_output = os.environ.get("GITHUB_OUTPUT")
