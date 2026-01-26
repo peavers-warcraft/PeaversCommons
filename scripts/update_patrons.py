@@ -9,6 +9,7 @@ free followers.
 Required environment variables:
     PATREON_ACCESS_TOKEN: Creator Access Token from Patreon Developer Portal
     PATREON_CAMPAIGN_ID: Your campaign ID (optional, will auto-detect if not set)
+    DISCORD_WEBHOOK_URL: Discord webhook URL for new patron notifications (optional)
 """
 
 import os
@@ -22,7 +23,6 @@ from pathlib import Path
 
 PATREON_API_BASE = "https://www.patreon.com/api/oauth2/v2"
 LUA_OUTPUT_PATH = Path(__file__).parent.parent / "src" / "Core" / "PatronsInit.lua"
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1465399335813644389/yzIFVLupMKtm9VbzLzJQfOnw8crtRx-qgOvT7nmwhoGS11I8mqp0rJfxO57gPN4HLRqR"
 
 
 def fetch_json(url: str, access_token: str) -> dict:
@@ -224,7 +224,10 @@ def send_discord_notification(new_patrons: list[tuple[str, str]]) -> bool:
     Returns:
         True if notification sent successfully, False otherwise
     """
-    if not new_patrons or not DISCORD_WEBHOOK_URL:
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not new_patrons or not webhook_url:
+        if not webhook_url:
+            print("DISCORD_WEBHOOK_URL not set, skipping notification")
         return False
 
     # Build the message
@@ -255,7 +258,7 @@ def send_discord_notification(new_patrons: list[tuple[str, str]]) -> bool:
 
     try:
         request = Request(
-            DISCORD_WEBHOOK_URL,
+            webhook_url,
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST"
