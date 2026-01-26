@@ -1,0 +1,65 @@
+name: Update Patrons List
+
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if no changes'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  update-patrons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch patrons from Patreon
+        id: update
+        env:
+          PATREON_ACCESS_TOKEN: ${{ secrets.PATREON_ACCESS_TOKEN }}
+          PATREON_CAMPAIGN_ID: ${{ secrets.PATREON_CAMPAIGN_ID }}
+        run: python scripts/update_patrons.py
+
+      - name: Check for changes and commit
+        id: commit
+        run: |
+          if git diff --quiet src/Core/PatronsInit.lua; then
+            echo "No changes detected in patron list"
+            echo "committed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected, committing..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add src/Core/PatronsInit.lua
+            git commit -m "chore: Update patron list from Patreon"
+            git push
+            echo "committed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Force commit (if requested with no changes)
+        if: inputs.force_release == true && steps.commit.outputs.committed != 'true'
+        run: |
+          echo "Force release requested but no changes - creating empty commit"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: Force patron list update"
+          git push
+
+      # Note: The push to master will automatically trigger the release.yml workflow

@@ -11,6 +11,8 @@ local Utils = PeaversCommons.Utils
 local PADDING = 16
 local LINE_HEIGHT = 18
 local SECTION_SPACING = 15
+local SCROLL_THRESHOLD = 10  -- Enable scrolling when more than this many patrons
+local SCROLL_HEIGHT = 120    -- Height of scroll area when scrolling is enabled
 
 -- Create a frame to display patron information
 function PatronsUI:CreatePatronsFrame(parentFrame)
@@ -59,23 +61,64 @@ function PatronsUI:CreatePatronsFrame(parentFrame)
     titleText:SetText("Special Thanks To Our Patrons")
     titleText:SetTextColor(1, 0.82, 0)  -- Gold-ish color
     
-    -- Create a simple centered list for patrons
-    local patronsList = patronsFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    patronsList:SetPoint("TOP", titleText, "BOTTOM", 0, -SECTION_SPACING)
-    patronsList:SetPoint("LEFT", patronsFrame, "LEFT", PADDING, 0)
-    patronsList:SetPoint("RIGHT", patronsFrame, "RIGHT", -PADDING, 0)
+    -- Container for patron list (will hold either simple text or scroll frame)
+    local listContainer = CreateFrame("Frame", nil, patronsFrame)
+    listContainer:SetPoint("TOP", titleText, "BOTTOM", 0, -SECTION_SPACING)
+    listContainer:SetPoint("LEFT", patronsFrame, "LEFT", PADDING, 0)
+    listContainer:SetPoint("RIGHT", patronsFrame, "RIGHT", -PADDING, 0)
+    listContainer:SetHeight(LINE_HEIGHT * 3)  -- Initial height
+
+    -- Simple text display for small patron counts
+    local patronsList = listContainer:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    patronsList:SetPoint("TOPLEFT", 0, 0)
+    patronsList:SetPoint("TOPRIGHT", 0, 0)
     patronsList:SetJustifyH("CENTER")
-    patronsList:SetSpacing(5)  -- Add some spacing between lines if text wraps
-    
+    patronsList:SetSpacing(5)
+
+    -- Scroll frame for large patron counts (created on demand)
+    local scrollFrame = nil
+    local scrollChild = nil
+    local scrollText = nil
+
+    local function CreateScrollFrame()
+        if scrollFrame then return end
+
+        -- Create scroll frame
+        scrollFrame = CreateFrame("ScrollFrame", nil, listContainer, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", 0, 0)
+        scrollFrame:SetPoint("BOTTOMRIGHT", -24, 0)  -- Leave room for scrollbar
+
+        -- Create scroll child
+        scrollChild = CreateFrame("Frame", nil, scrollFrame)
+        scrollChild:SetSize(listContainer:GetWidth() - 24, 1)  -- Height set dynamically
+        scrollFrame:SetScrollChild(scrollChild)
+
+        -- Create text in scroll child
+        scrollText = scrollChild:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+        scrollText:SetPoint("TOPLEFT", 0, 0)
+        scrollText:SetPoint("TOPRIGHT", 0, 0)
+        scrollText:SetJustifyH("CENTER")
+        scrollText:SetSpacing(5)
+
+        scrollFrame:Hide()  -- Hidden by default
+    end
+
     -- Store references to UI elements
     patronsFrame.titleText = titleText
     patronsFrame.patronsList = patronsList
-    
+    patronsFrame.listContainer = listContainer
+
     -- Immediately load and display patron list
     function patronsFrame:UpdatePatrons()
-        -- Get all patrons
-        local allPatrons = Patrons:GetAll()
-        
+        -- Safety check for Patrons module
+        if not Patrons or not Patrons.GetSorted then
+            self:Hide()
+            return
+        end
+
+        -- Get sorted patrons (gold tier first, then silver, then alphabetically)
+        local allPatrons = Patrons:GetSorted()
+
         -- Hide the frame if no patrons
         if #allPatrons == 0 then
             self:Hide()
@@ -83,27 +126,56 @@ function PatronsUI:CreatePatronsFrame(parentFrame)
         else
             self:Show()
         end
-        
-        -- Sort patrons alphabetically
-        table.sort(allPatrons, function(a, b) 
-            return a.name < b.name
-        end)
-        
-        -- Create patron names string with bullet point separators
+
+        -- Build colored patron names with tier colors
         local patronNames = {}
         for _, patron in ipairs(allPatrons) do
-            table.insert(patronNames, patron.name)
+            local coloredName = Patrons:GetColoredName(patron)
+            table.insert(patronNames, coloredName)
         end
-        
-        -- Join with bullet points and display
-        self.patronsList:SetText(table.concat(patronNames, " • "))
-        
-        -- Set height based on text height
-        self.patronsList:SetHeight(self.patronsList:GetStringHeight() + PADDING)
-        
+
+        -- Join with bullet points
+        local displayText = table.concat(patronNames, " |cffffffff•|r ")
+
+        -- Determine if we need scrolling
+        local useScrolling = #allPatrons > SCROLL_THRESHOLD
+
+        if useScrolling then
+            -- Create scroll frame if needed
+            CreateScrollFrame()
+
+            -- Show scroll frame, hide simple text
+            scrollFrame:Show()
+            patronsList:Hide()
+
+            -- Set content
+            scrollText:SetText(displayText)
+
+            -- Set scroll child height based on content
+            local textHeight = scrollText:GetStringHeight() + PADDING
+            scrollChild:SetHeight(textHeight)
+            scrollChild:SetWidth(listContainer:GetWidth() - 24)
+
+            -- Set container height to scroll area height
+            listContainer:SetHeight(SCROLL_HEIGHT)
+        else
+            -- Hide scroll frame if it exists
+            if scrollFrame then
+                scrollFrame:Hide()
+            end
+            patronsList:Show()
+
+            -- Set content
+            patronsList:SetText(displayText)
+
+            -- Set height based on text height
+            local textHeight = patronsList:GetStringHeight() + PADDING
+            listContainer:SetHeight(textHeight)
+        end
+
         -- Update total frame height (including UI Vault section above with margins)
-        self:SetHeight(self.titleText:GetHeight() + SECTION_SPACING + self.patronsList:GetHeight() + PADDING + 60 + 100)  -- 60 for UI Vault + 100 for margins (50 top + 50 bottom)
-        
+        self:SetHeight(self.titleText:GetHeight() + SECTION_SPACING + listContainer:GetHeight() + PADDING + 60 + 100)
+
         -- Flag as updated
         self.isUpdated = true
     end
