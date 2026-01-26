@@ -5,6 +5,12 @@ function Utils.Debug(addon, ...)
     if addon and addon.Config and addon.Config.DEBUG_ENABLED then
         print("|cFF00FFFF[" .. addon.name .. " Debug]|r", ...)
     end
+
+    if PeaversCommons.Debug and PeaversCommons.Debug.Log then
+        local source = addon and addon.name or "Unknown"
+        local message = table.concat({...}, " ")
+        PeaversCommons.Debug:Log(source, message, "DEBUG")
+    end
 end
 
 function Utils.Print(addon, ...)

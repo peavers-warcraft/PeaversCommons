@@ -23,6 +23,7 @@ PeaversCommons.BarManager = {}
 PeaversCommons.StatBar = {}
 PeaversCommons.TitleBar = {}
 PeaversCommons.BarStyles = {}
+PeaversCommons.Debug = {}
 
 _G.PeaversCommons = PeaversCommons
 
