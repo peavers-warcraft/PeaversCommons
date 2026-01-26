@@ -26,10 +26,12 @@ src\Core\ConfigUIUtils.lua
 src\Core\ConfigManager.lua
 src\Core\Patrons.lua
 src\Core\BarStyles.lua
+src\Core\Debug.lua
 
 src\Utils\Utils.lua
 
 src\UI\SupportUI.lua
+src\UI\DebugDialog.lua
 src\UI\PatronsUI.lua
 src\UI\SettingsUI.lua
 src\UI\BarManager.lua
