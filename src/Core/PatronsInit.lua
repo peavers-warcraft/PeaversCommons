@@ -16,8 +16,20 @@ local function InitializePatrons()
     end
 
     Patrons:AddPatrons({
-        { name = "Kyrshiro - Kel'Thuzad", tier = "gold" },
-        { name = "Plunger - Kel'Thuzad", tier = "gold" },
+        { name = "Brian Huddleston", tier = "gold" },
+        { name = "Michael Giallourakis", tier = "gold" },
+        { name = "tyronious88", tier = "gold" },
+        { name = "Bill Chirico", tier = "silver" },
+        { name = "Chris Turner", tier = "silver" },
+        { name = "James Toal", tier = "silver" },
+        { name = "Jeremy ", tier = "silver" },
+        { name = "Jordan Love", tier = "silver" },
+        { name = "Kaitonel", tier = "silver" },
+        { name = "Nick", tier = "silver" },
+        { name = "Nova One", tier = "silver" },
+        { name = "Riaan Piketh", tier = "silver" },
+        { name = "Sarah Altrowitz", tier = "silver" },
+        { name = "Spectro", tier = "silver" },
     })
 
     return true
