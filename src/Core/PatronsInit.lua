@@ -1,3 +1,7 @@
+-- AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
+-- This file is automatically updated by GitHub Actions from Patreon data
+-- Last updated: See git commit timestamp
+
 local PeaversCommons = _G.PeaversCommons
 local Patrons = PeaversCommons.Patrons
 
@@ -6,9 +10,14 @@ local function InitializePatrons()
         return false
     end
 
+    -- Clear existing patrons to prevent duplicates on reload
+    if Patrons.Clear then
+        Patrons:Clear()
+    end
+
     Patrons:AddPatrons({
-        "Kyrshiro - Kel'Thuzad",
-        "Plunger - Kel'Thuzad",
+        { name = "Kyrshiro - Kel'Thuzad", tier = "gold" },
+        { name = "Plunger - Kel'Thuzad", tier = "gold" },
     })
 
     return true
