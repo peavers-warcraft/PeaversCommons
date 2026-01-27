@@ -1,0 +1,13 @@
+# .peavers.yml - Addon metadata for peavers.io website
+
+# Icon to display on website
+iconType: ArcaneRuneIcon
+
+# CurseForge project ID for download statistics
+curseForgeProjectId: 1259953
+
+# Tags for filtering and categorization
+tags:
+  - library
+  - utility
+  - framework
