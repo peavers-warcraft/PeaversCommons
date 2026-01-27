@@ -176,13 +176,28 @@ local function CreateMessageArea(parent)
         end
     end)
 
-    local scrollBar = CreateFrame("Slider", nil, messageArea, "UIPanelScrollBarTemplate")
-    scrollBar:SetPoint("TOPRIGHT", -4, -20)
-    scrollBar:SetPoint("BOTTOMRIGHT", -4, 20)
+    local scrollBar = CreateFrame("Slider", "PeaversDebugDialogScrollBar", messageArea, "BackdropTemplate")
+    scrollBar:SetPoint("TOPRIGHT", -4, -16)
+    scrollBar:SetPoint("BOTTOMRIGHT", -4, 16)
+    scrollBar:SetWidth(16)
+    scrollBar:SetOrientation("VERTICAL")
     scrollBar:SetMinMaxValues(0, 1)
     scrollBar:SetValueStep(1)
     scrollBar:SetValue(0)
-    scrollBar:SetWidth(16)
+    scrollBar:SetObeyStepOnDrag(true)
+
+    scrollBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+        edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+        tile = true, tileSize = 8, edgeSize = 8,
+        insets = { left = 3, right = 3, top = 6, bottom = 6 }
+    })
+
+    local thumb = scrollBar:CreateTexture(nil, "ARTWORK")
+    thumb:SetTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
+    thumb:SetSize(18, 24)
+    scrollBar:SetThumbTexture(thumb)
+
     scrollBar:SetScript("OnValueChanged", function(self, value)
         messageFrame:SetScrollOffset(math.floor(value))
     end)
@@ -190,17 +205,19 @@ local function CreateMessageArea(parent)
     messageFrame.scrollBar = scrollBar
 
     local function UpdateScrollBar()
-        local numMessages = messageFrame:GetNumMessages()
-        local numVisibleLines = messageFrame:GetNumLinesDisplayed()
-        local maxScroll = math.max(0, numMessages - numVisibleLines)
+        local numMessages = messageFrame:GetNumMessages() or 0
+        -- Estimate ~20 visible lines based on typical frame height and font size
+        local estimatedVisibleLines = 20
+        local maxScroll = math.max(0, numMessages - estimatedVisibleLines)
         scrollBar:SetMinMaxValues(0, maxScroll)
     end
 
     local origAddMessage = messageFrame.AddMessage
     messageFrame.AddMessage = function(self, msg, ...)
         origAddMessage(self, msg, ...)
-        UpdateScrollBar()
-        scrollBar:SetValue(0)
+        C_Timer.After(0, function()
+            UpdateScrollBar()
+        end)
     end
 
     local origClear = messageFrame.Clear
