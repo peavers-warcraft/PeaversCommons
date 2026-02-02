@@ -42,7 +42,6 @@ src\Utils\Utils.lua
 
 src\Core\BarPool.lua
 src\Core\UpdateCoordinator.lua
-src\Core\FrameLock.lua
 
 src\UI\SupportUI.lua
 src\UI\DebugDialog.lua

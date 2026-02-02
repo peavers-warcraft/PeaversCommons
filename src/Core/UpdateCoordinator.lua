@@ -1,8 +1,9 @@
-local MAJOR, MINOR = "PeaversCommons-UpdateCoordinator", 1
-local lib = LibStub:NewLibrary(MAJOR, MINOR)
-if not lib then return end
-
 local PeaversCommons = _G.PeaversCommons
+
+-- Return existing if already created
+if PeaversCommons.UpdateCoordinator then
+    return PeaversCommons.UpdateCoordinator
+end
 
 --[[
     UpdateCoordinator - Debounced event batching for UI updates

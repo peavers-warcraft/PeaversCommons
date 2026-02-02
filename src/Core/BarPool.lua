@@ -1,8 +1,9 @@
-local MAJOR, MINOR = "PeaversCommons-BarPool", 1
-local lib = LibStub:NewLibrary(MAJOR, MINOR)
-if not lib then return end
-
 local PeaversCommons = _G.PeaversCommons
+
+-- Return existing if already created
+if PeaversCommons.BarPool then
+    return PeaversCommons.BarPool
+end
 
 --[[
     BarPool - Generic frame pooling system for efficient bar reuse
