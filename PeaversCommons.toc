@@ -3,7 +3,7 @@
 ## Title: |cff3abdf7Peavers|rCommons
 ## Notes: Common functionality for Peavers addons
 ## Author: Peavers
-## Version: 1.0.25
+## Version: 1.1.0
 
 ## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Category-enUS: Peavers
@@ -28,7 +28,17 @@ src\Core\Patrons.lua
 src\Core\BarStyles.lua
 src\Core\Debug.lua
 
+src\Config\DefaultConfig.lua
+src\Config\ConfigSchema.lua
+src\Config\ConfigControls.lua
+src\Config\SettingsPanels.lua
+src\Config\ConfigMigration.lua
+
 src\Utils\Utils.lua
+
+src\Core\BarPool.lua
+src\Core\UpdateCoordinator.lua
+src\Core\FrameLock.lua
 
 src\UI\SupportUI.lua
 src\UI\DebugDialog.lua
