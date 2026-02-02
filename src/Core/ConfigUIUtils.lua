@@ -267,6 +267,111 @@ function ConfigUIUtils.CreateHelpIcon(parent, anchorFrame, tooltipTitle, tooltip
     return helpIcon, helpFrame
 end
 
+--------------------------------------------------------------------------------
+-- Global Appearance Section
+-- Creates UI elements for managing global appearance sync
+--------------------------------------------------------------------------------
+
+-- Creates a complete global appearance UI section
+-- @param parent: Parent frame for the UI elements
+-- @param addonName: Name of the addon (e.g., "PeaversSystemBars")
+-- @param addon: The addon table (e.g., PSB)
+-- @param x: X offset for positioning
+-- @param y: Y offset for positioning
+-- @param onRefreshUI: Callback to refresh the addon's UI after changes
+-- @return lastElement, newY: The last UI element created and the new Y position
+function ConfigUIUtils.CreateGlobalAppearanceSection(parent, addonName, addon, x, y, onRefreshUI)
+    local GlobalAppearance = PeaversCommons.GlobalAppearance
+    local config = addon.Config
+
+    -- Section header
+    local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    header:SetPoint("TOPLEFT", x, y)
+    header:SetText("Global Appearance")
+    header:SetTextColor(1, 0.84, 0)
+    y = y - 25
+
+    -- Description
+    local desc = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    desc:SetPoint("TOPLEFT", x, y)
+    desc:SetText("Sync appearance settings across all Peavers addons")
+    desc:SetTextColor(0.7, 0.7, 0.7)
+    y = y - 25
+
+    -- Checkbox to enable/disable global appearance
+    local checkbox = ConfigUIUtils.CreateCheckbox(
+        parent,
+        addonName .. "_UseGlobalAppearance",
+        "Use Global Appearance",
+        x,
+        y,
+        config.useGlobalAppearance,
+        function(checked)
+            if checked then
+                config:EnableGlobalAppearance(addonName, function(key, value)
+                    if onRefreshUI then onRefreshUI() end
+                end)
+            else
+                config:DisableGlobalAppearance(addonName)
+            end
+            config:Save()
+            if onRefreshUI then onRefreshUI() end
+        end
+    )
+    y = y - 30
+
+    -- Button container
+    local buttonContainer = CreateFrame("Frame", nil, parent)
+    buttonContainer:SetSize(400, 30)
+    buttonContainer:SetPoint("TOPLEFT", x, y)
+
+    -- "Copy to Global" button - copies current addon settings to global
+    local copyToGlobalBtn = CreateFrame("Button", addonName .. "_CopyToGlobal", buttonContainer, "UIPanelButtonTemplate")
+    copyToGlobalBtn:SetSize(150, 24)
+    copyToGlobalBtn:SetPoint("LEFT", 0, 0)
+    copyToGlobalBtn:SetText("Copy to Global")
+    copyToGlobalBtn:SetScript("OnClick", function()
+        if GlobalAppearance then
+            config:CopyToGlobalAppearance()
+            if PeaversCommons.Utils and PeaversCommons.Utils.Print then
+                PeaversCommons.Utils.Print(addonName .. ": Appearance settings copied to global")
+            end
+        end
+    end)
+
+    -- Add tooltip to explain the button
+    FrameUtils.AddTooltip(copyToGlobalBtn, "Copy to Global",
+        "Copies this addon's current appearance settings (bar height, fonts, textures, etc.) to the global profile. Other addons using global appearance will receive these settings.")
+
+    -- "Sync from Global" button - syncs global settings to this addon
+    local syncFromGlobalBtn = CreateFrame("Button", addonName .. "_SyncFromGlobal", buttonContainer, "UIPanelButtonTemplate")
+    syncFromGlobalBtn:SetSize(150, 24)
+    syncFromGlobalBtn:SetPoint("LEFT", copyToGlobalBtn, "RIGHT", 10, 0)
+    syncFromGlobalBtn:SetText("Sync from Global")
+    syncFromGlobalBtn:SetScript("OnClick", function()
+        if GlobalAppearance then
+            GlobalAppearance:SyncToConfig(config)
+            config:Save()
+            if onRefreshUI then onRefreshUI() end
+            if PeaversCommons.Utils and PeaversCommons.Utils.Print then
+                PeaversCommons.Utils.Print(addonName .. ": Synced appearance from global settings")
+            end
+        end
+    end)
+
+    -- Add tooltip to explain the button
+    FrameUtils.AddTooltip(syncFromGlobalBtn, "Sync from Global",
+        "Copies the global appearance settings to this addon. Use this to manually update this addon's appearance to match the global profile.")
+
+    y = y - 35
+
+    -- Separator after section
+    local separator = ConfigUIUtils.CreateSeparator(parent, x, y, 400)
+    y = y - 15
+
+    return separator, y
+end
+
 -- Creates a standard settings panel with scrollable content
 function ConfigUIUtils.CreateSettingsPanel(title, description)
     local panel = CreateFrame("Frame")

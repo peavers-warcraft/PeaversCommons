@@ -1,128 +1,142 @@
-local MAJOR, MINOR = "PeaversCommons-1.0", 3
-local PeaversCommons = LibStub and LibStub(MAJOR) or {}
+--------------------------------------------------------------------------------
+-- TitleBar Module
+-- Creates a standard title bar with title, separator, and version text
+--------------------------------------------------------------------------------
 
--- Initialize TitleBar namespace
+local PeaversCommons = _G.PeaversCommons
 PeaversCommons.TitleBar = {}
 local TitleBar = PeaversCommons.TitleBar
 
--- Creates the title bar with text and version display
-function TitleBar:Create(parent, config)
-    local titleBar = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+-- Default font fallback
+local DEFAULT_FONT = "Fonts\\FRIZQT__.TTF"
+local DEFAULT_FONT_SIZE = 10
+
+--------------------------------------------------------------------------------
+-- Title Bar Creation
+--------------------------------------------------------------------------------
+
+-- Creates a title bar with title, vertical separator, and version/subtitle
+-- @param parentFrame: The parent frame for the title bar
+-- @param config: Config table with bgColor, bgAlpha, fontFace, fontSize, fontOutline, fontShadow
+-- @param options: Table with title, version/subtitle text
+-- @return titleBar: The created title bar frame
+function TitleBar:Create(parentFrame, config, options)
+    config = config or {}
+    options = options or {}
+
+    local titleBar = CreateFrame("Frame", nil, parentFrame, "BackdropTemplate")
     titleBar:SetHeight(20)
-    titleBar:SetWidth(parent:GetWidth())
-    titleBar:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    titleBar:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
-    
-    -- Set backdrop
+    titleBar:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", 0, 0)
+    titleBar:SetPoint("TOPRIGHT", parentFrame, "TOPRIGHT", 0, 0)
     titleBar:SetBackdrop({
         bgFile = "Interface\\BUTTONS\\WHITE8X8",
         edgeFile = "Interface\\BUTTONS\\WHITE8X8",
-        edgeSize = 1,
+        tile = true, tileSize = 16, edgeSize = 1,
     })
-    
-    if config.bgColor and config.bgAlpha then
-        titleBar:SetBackdropColor(
-            config.bgColor.r, 
-            config.bgColor.g, 
-            config.bgColor.b, 
-            config.bgAlpha
-        )
-        titleBar:SetBackdropBorderColor(0, 0, 0, 1)
-    else
-        titleBar:SetBackdropColor(0, 0, 0, 0.8)
-        titleBar:SetBackdropBorderColor(0, 0, 0, 1)
-    end
-    
+
+    -- Background color
+    local bgColor = config.bgColor or { r = 0, g = 0, b = 0 }
+    local bgAlpha = config.bgAlpha or 0.8
+    titleBar:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, bgAlpha)
+    titleBar:SetBackdropBorderColor(0, 0, 0, bgAlpha)
+
+    -- Font settings
+    local fontFace = config.fontFace or DEFAULT_FONT
+    local fontSize = config.fontSize or DEFAULT_FONT_SIZE
+    local fontOutline = config.fontOutline and "OUTLINE" or ""
+    local fontShadow = config.fontShadow
+
     -- Title text
-    local titleText = titleBar:CreateFontString(nil, "OVERLAY")
-    titleText:SetFont(config.fontFace or "Fonts\\FRIZQT__.TTF", 
-                      config.fontSize or 12, 
-                      config.fontOutline or "OUTLINE")
-    titleText:SetPoint("LEFT", titleBar, "LEFT", 5, 0)
-    titleText:SetText(config.title or "Untitled")
-    titleText:SetTextColor(1, 1, 1, 1)
-    
-    if config.fontShadow then
-        titleText:SetShadowOffset(1, -1)
-        titleText:SetShadowColor(0, 0, 0, 1)
+    local title = titleBar:CreateFontString(nil, "OVERLAY")
+    title:SetFont(fontFace, fontSize, fontOutline)
+    title:SetPoint("LEFT", titleBar, "LEFT", options.leftPadding or 5, 0)
+    title:SetText(options.title or "Title")
+    title:SetTextColor(1, 1, 1)
+    if fontShadow then
+        title:SetShadowOffset(1, -1)
+    else
+        title:SetShadowOffset(0, 0)
     end
-    
-    titleBar.titleText = titleText
-    
-    -- Version text
-    local versionText = titleBar:CreateFontString(nil, "OVERLAY")
-    versionText:SetFont(config.fontFace or "Fonts\\FRIZQT__.TTF", 
-                        (config.fontSize or 12) - 2, 
-                        config.fontOutline or "OUTLINE")
-    versionText:SetPoint("RIGHT", titleBar, "RIGHT", -5, 0)
-    versionText:SetText("v" .. (config.version or "0.0.0"))
-    versionText:SetTextColor(0.7, 0.7, 0.7, 1)
-    
-    if config.fontShadow then
-        versionText:SetShadowOffset(1, -1)
-        versionText:SetShadowColor(0, 0, 0, 1)
+    titleBar.title = title
+
+    -- Vertical line separator
+    local verticalLine = titleBar:CreateTexture(nil, "ARTWORK")
+    verticalLine:SetSize(1, 16)
+    verticalLine:SetPoint("LEFT", title, "RIGHT", 5, 0)
+    verticalLine:SetColorTexture(0.3, 0.3, 0.3, 0.5)
+    titleBar.verticalLine = verticalLine
+
+    -- Subtitle/version text
+    local subtitle = titleBar:CreateFontString(nil, "OVERLAY")
+    subtitle:SetFont(fontFace, fontSize, fontOutline)
+    subtitle:SetPoint("LEFT", verticalLine, "RIGHT", 5, 0)
+    subtitle:SetText(options.subtitle or ("v" .. (options.version or "1.0.0")))
+    subtitle:SetTextColor(0.8, 0.8, 0.8)
+    if fontShadow then
+        subtitle:SetShadowOffset(1, -1)
+    else
+        subtitle:SetShadowOffset(0, 0)
     end
-    
-    titleBar.versionText = versionText
-    
-    -- Set script for dragging
-    titleBar:EnableMouse(true)
-    titleBar:RegisterForDrag("LeftButton", "RightButton")
-    titleBar:SetScript("OnDragStart", function(self, button)
-        if button == "LeftButton" then
-            parent:StartMoving()
-        end
-    end)
-    titleBar:SetScript("OnDragStop", function()
-        parent:StopMovingOrSizing()
-        if parent.OnDragStop then
-            parent:OnDragStop()
-        end
-    end)
-    
-    -- Store reference to parent
-    titleBar.parent = parent
-    
-    -- Methods
-    titleBar.UpdateTitle = function(self, newTitle)
-        self.titleText:SetText(newTitle)
-    end
-    
-    titleBar.UpdateVersion = function(self, newVersion)
-        self.versionText:SetText("v" .. newVersion)
-    end
-    
-    titleBar.SetColors = function(self, bgColor, bgAlpha)
-        if bgColor and bgAlpha then
-            self:SetBackdropColor(
-                bgColor.r, 
-                bgColor.g, 
-                bgColor.b, 
-                bgAlpha
-            )
-        end
-    end
-    
-    titleBar.UpdateFont = function(self, fontFace, fontSize, fontOutline, fontShadow)
-        self.titleText:SetFont(fontFace, fontSize, fontOutline)
-        self.versionText:SetFont(fontFace, fontSize - 2, fontOutline)
-        
-        if fontShadow then
-            self.titleText:SetShadowOffset(1, -1)
-            self.titleText:SetShadowColor(0, 0, 0, 1)
-            self.versionText:SetShadowOffset(1, -1)
-            self.versionText:SetShadowColor(0, 0, 0, 1)
-        else
-            self.titleText:SetShadowOffset(0, 0)
-            self.versionText:SetShadowOffset(0, 0)
-        end
-    end
-    
-    titleBar.UpdateWidth = function(self)
-        self:SetWidth(self.parent:GetWidth())
-    end
-    
+    titleBar.subtitle = subtitle
+
+    -- Store config reference for updates
+    titleBar.config = config
+    titleBar.parent = parentFrame
+
+    -- Attach methods
+    titleBar.UpdateColors = TitleBar.UpdateColors
+    titleBar.UpdateFont = TitleBar.UpdateFont
+    titleBar.UpdateTitle = TitleBar.UpdateTitle
+    titleBar.UpdateSubtitle = TitleBar.UpdateSubtitle
+    titleBar.UpdateWidth = TitleBar.UpdateWidth
+
     return titleBar
+end
+
+--------------------------------------------------------------------------------
+-- Update Methods (called on titleBar instances)
+--------------------------------------------------------------------------------
+
+-- Updates the background colors
+function TitleBar:UpdateColors(bgColor, bgAlpha)
+    bgColor = bgColor or self.config.bgColor or { r = 0, g = 0, b = 0 }
+    bgAlpha = bgAlpha or self.config.bgAlpha or 0.8
+    self:SetBackdropColor(bgColor.r, bgColor.g, bgColor.b, bgAlpha)
+    self:SetBackdropBorderColor(0, 0, 0, bgAlpha)
+end
+
+-- Updates the font settings
+function TitleBar:UpdateFont(fontFace, fontSize, fontOutline, fontShadow)
+    fontFace = fontFace or self.config.fontFace or DEFAULT_FONT
+    fontSize = fontSize or self.config.fontSize or DEFAULT_FONT_SIZE
+    fontOutline = fontOutline or (self.config.fontOutline and "OUTLINE" or "")
+    fontShadow = fontShadow or self.config.fontShadow
+
+    self.title:SetFont(fontFace, fontSize, fontOutline)
+    self.subtitle:SetFont(fontFace, fontSize, fontOutline)
+
+    if fontShadow then
+        self.title:SetShadowOffset(1, -1)
+        self.subtitle:SetShadowOffset(1, -1)
+    else
+        self.title:SetShadowOffset(0, 0)
+        self.subtitle:SetShadowOffset(0, 0)
+    end
+end
+
+-- Updates the title text
+function TitleBar:UpdateTitle(newTitle)
+    self.title:SetText(newTitle)
+end
+
+-- Updates the subtitle/version text
+function TitleBar:UpdateSubtitle(newSubtitle)
+    self.subtitle:SetText(newSubtitle)
+end
+
+-- Updates the width to match parent
+function TitleBar:UpdateWidth()
+    self:SetWidth(self.parent:GetWidth())
 end
 
 return TitleBar

@@ -98,17 +98,53 @@ function Utils.GetCharacterKey()
 end
 
 function Utils.FormatPercent(value, decimals)
-    decimals = decimals or 2
-    return string.format("%." .. decimals .. "f%%", value or 0)
+    -- Ensure value is a number
+    if type(value) ~= "number" or value ~= value then  -- NaN check
+        value = 0
+    end
+    -- Ensure decimals is a valid integer (0-10)
+    decimals = tonumber(decimals)
+    if not decimals or decimals < 0 or decimals > 10 then
+        decimals = 2
+    else
+        decimals = math.floor(decimals)
+    end
+    -- Use pre-defined format patterns to avoid concatenation issues
+    local formats = {
+        [0] = "%.0f%%", [1] = "%.1f%%", [2] = "%.2f%%", [3] = "%.3f%%",
+        [4] = "%.4f%%", [5] = "%.5f%%", [6] = "%.6f%%", [7] = "%.7f%%",
+        [8] = "%.8f%%", [9] = "%.9f%%", [10] = "%.10f%%"
+    }
+    return string.format(formats[decimals] or "%.2f%%", value)
 end
 
 function Utils.FormatChange(value, decimals)
-    decimals = decimals or 2
-    local format = "%." .. decimals .. "f"
+    -- Ensure value is a number
+    if type(value) ~= "number" or value ~= value then  -- NaN check
+        value = 0
+    end
+    -- Ensure decimals is a valid integer (0-10)
+    decimals = tonumber(decimals)
+    if not decimals or decimals < 0 or decimals > 10 then
+        decimals = 2
+    else
+        decimals = math.floor(decimals)
+    end
+    -- Use pre-defined format patterns to avoid concatenation issues
+    local posFormats = {
+        [0] = "+%.0f", [1] = "+%.1f", [2] = "+%.2f", [3] = "+%.3f",
+        [4] = "+%.4f", [5] = "+%.5f", [6] = "+%.6f", [7] = "+%.7f",
+        [8] = "+%.8f", [9] = "+%.9f", [10] = "+%.10f"
+    }
+    local negFormats = {
+        [0] = "%.0f", [1] = "%.1f", [2] = "%.2f", [3] = "%.3f",
+        [4] = "%.4f", [5] = "%.5f", [6] = "%.6f", [7] = "%.7f",
+        [8] = "%.8f", [9] = "%.9f", [10] = "%.10f"
+    }
     if value > 0 then
-        return string.format("+" .. format, value)
+        return string.format(posFormats[decimals] or "+%.2f", value)
     elseif value < 0 then
-        return string.format(format, value)
+        return string.format(negFormats[decimals] or "%.2f", value)
     else
         return "0"
     end

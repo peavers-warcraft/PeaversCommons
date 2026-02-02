@@ -21,9 +21,13 @@ src\Core\Config.lua
 src\Core\Events.lua
 src\Core\SlashCommands.lua
 src\Core\FrameCore.lua
+src\Core\FrameLock.lua
+src\Core\VisibilityManager.lua
+src\Core\AddonInit.lua
 src\Core\FrameUtils.lua
 src\Core\ConfigUIUtils.lua
 src\Core\ConfigManager.lua
+src\Core\GlobalAppearance.lua
 src\Core\Patrons.lua
 src\Core\BarStyles.lua
 src\Core\Debug.lua
@@ -44,8 +48,10 @@ src\UI\SupportUI.lua
 src\UI\DebugDialog.lua
 src\UI\PatronsUI.lua
 src\UI\SettingsUI.lua
-src\UI\BarManager.lua
+src\UI\AnimatedStatusBar.lua
+src\UI\BarTextManager.lua
 src\UI\StatBar.lua
+src\UI\BarManager.lua
 src\UI\TitleBar.lua
 
 src\Templates\patrons_template.lua
