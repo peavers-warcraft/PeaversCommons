@@ -218,12 +218,242 @@ end
 
 function Utils.TableKeys(tbl)
     if type(tbl) ~= "table" then return {} end
-    
+
     local keys = {}
     for k, _ in pairs(tbl) do
         table.insert(keys, k)
     end
     return keys
+end
+
+-- ============================================================================
+-- Font and Texture Utilities
+-- ============================================================================
+
+-- Default font path for WoW
+local DEFAULT_FONT = "Fonts\\FRIZQT__.TTF"
+
+-- Locale-aware default fonts
+local LOCALE_FONTS = {
+    ["koKR"] = "Fonts\\2002.TTF",
+    ["zhCN"] = "Fonts\\ARKai_T.TTF",
+    ["zhTW"] = "Fonts\\blei00d.TTF",
+    ["ruRU"] = "Fonts\\FRIZQT___CYR.TTF",
+}
+
+-- Gets the locale-appropriate default font
+-- @return string Font path
+function Utils.GetDefaultFont()
+    local locale = GetLocale()
+    return LOCALE_FONTS[locale] or DEFAULT_FONT
+end
+
+-- Gets list of available fonts, integrating with LibSharedMedia if available
+-- @return table Array of {name, path} pairs
+function Utils.GetFonts()
+    local fonts = {}
+
+    -- Built-in WoW fonts
+    local builtInFonts = {
+        { name = "Friz Quadrata TT", path = "Fonts\\FRIZQT__.TTF" },
+        { name = "Arial Narrow", path = "Fonts\\ARIALN.TTF" },
+        { name = "Skurri", path = "Fonts\\SKURRI.TTF" },
+        { name = "Morpheus", path = "Fonts\\MORPHEUS.TTF" },
+    }
+
+    for _, font in ipairs(builtInFonts) do
+        table.insert(fonts, font)
+    end
+
+    -- Try to get fonts from LibSharedMedia
+    local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local lsmFonts = LSM:HashTable("font")
+        if lsmFonts then
+            for name, path in pairs(lsmFonts) do
+                -- Avoid duplicates
+                local isDuplicate = false
+                for _, existing in ipairs(fonts) do
+                    if existing.path == path then
+                        isDuplicate = true
+                        break
+                    end
+                end
+                if not isDuplicate then
+                    table.insert(fonts, { name = name, path = path })
+                end
+            end
+        end
+    end
+
+    -- Sort alphabetically by name
+    table.sort(fonts, function(a, b) return a.name < b.name end)
+
+    return fonts
+end
+
+-- Gets list of available bar textures, integrating with LibSharedMedia and Details if available
+-- @return table Array of {name, path} pairs
+function Utils.GetBarTextures()
+    local textures = {}
+
+    -- Built-in textures
+    local builtInTextures = {
+        { name = "Solid", path = "Interface\\BUTTONS\\WHITE8X8" },
+        { name = "Blizzard", path = "Interface\\TargetingFrame\\UI-StatusBar" },
+        { name = "Blizzard Raid", path = "Interface\\RaidFrame\\Raid-Bar-Hp-Fill" },
+        { name = "Minimalist", path = "Interface\\BUTTONS\\WHITE8X8" },
+    }
+
+    for _, texture in ipairs(builtInTextures) do
+        table.insert(textures, texture)
+    end
+
+    -- Try to get textures from LibSharedMedia
+    local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local lsmTextures = LSM:HashTable("statusbar")
+        if lsmTextures then
+            for name, path in pairs(lsmTextures) do
+                -- Avoid duplicates
+                local isDuplicate = false
+                for _, existing in ipairs(textures) do
+                    if existing.path == path then
+                        isDuplicate = true
+                        break
+                    end
+                end
+                if not isDuplicate then
+                    table.insert(textures, { name = name, path = path })
+                end
+            end
+        end
+    end
+
+    -- Try to get textures from Details! addon
+    local Details = _G.Details
+    if Details and Details.SharedMedia and Details.SharedMedia.statusbar then
+        for name, path in pairs(Details.SharedMedia.statusbar) do
+            local isDuplicate = false
+            for _, existing in ipairs(textures) do
+                if existing.path == path then
+                    isDuplicate = true
+                    break
+                end
+            end
+            if not isDuplicate then
+                table.insert(textures, { name = "Details: " .. name, path = path })
+            end
+        end
+    end
+
+    -- Sort alphabetically by name
+    table.sort(textures, function(a, b) return a.name < b.name end)
+
+    return textures
+end
+
+-- Safely sets font on a font string with fallback handling
+-- If the primary font fails, falls back to the default locale font
+-- @param fontString The font string object to modify
+-- @param fontPath The font path to try
+-- @param fontSize Font size in points
+-- @param fontFlags Font flags like "OUTLINE" (optional)
+-- @return boolean True if font was set successfully
+function Utils.SafeSetFont(fontString, fontPath, fontSize, fontFlags)
+    if not fontString then return false end
+
+    fontSize = fontSize or 12
+    fontFlags = fontFlags or ""
+
+    -- Try the requested font
+    local success = pcall(function()
+        fontString:SetFont(fontPath, fontSize, fontFlags)
+    end)
+
+    if success then
+        -- Verify the font was actually set
+        local currentFont = fontString:GetFont()
+        if currentFont then
+            return true
+        end
+    end
+
+    -- Fallback to default font
+    local defaultFont = Utils.GetDefaultFont()
+    if fontPath ~= defaultFont then
+        success = pcall(function()
+            fontString:SetFont(defaultFont, fontSize, fontFlags)
+        end)
+        if success then
+            return true
+        end
+    end
+
+    -- Last resort: basic WoW font
+    pcall(function()
+        fontString:SetFont(DEFAULT_FONT, fontSize, fontFlags)
+    end)
+
+    return false
+end
+
+-- Gets a contrasting color for text/overlay visibility
+-- @param r Red component (0-1)
+-- @param g Green component (0-1)
+-- @param b Blue component (0-1)
+-- @return r, g, b Contrasting color components
+function Utils.GetContrastingColor(r, g, b)
+    -- Calculate perceived brightness using standard luminance formula
+    local brightness = (r * 0.299) + (g * 0.587) + (b * 0.114)
+
+    if brightness > 0.5 then
+        -- Bright color, return darker version
+        return r * 0.5, g * 0.5, b * 0.5
+    else
+        -- Dark color, return lighter version
+        return math.min(1, r + 0.5), math.min(1, g + 0.5), math.min(1, b + 0.5)
+    end
+end
+
+-- Truncates text to fit within a specified width
+-- Uses binary search for efficiency (based on PIL's optimization)
+-- @param fontString The font string to measure with
+-- @param text The text to truncate
+-- @param maxWidth Maximum width in pixels
+-- @param suffix Suffix to add when truncated (default "...")
+-- @return string The truncated text
+function Utils.TruncateText(fontString, text, maxWidth, suffix)
+    if not fontString or not text or not maxWidth then
+        return text or ""
+    end
+
+    suffix = suffix or "..."
+
+    -- Check if text already fits
+    fontString:SetText(text)
+    if fontString:GetStringWidth() <= maxWidth then
+        return text
+    end
+
+    -- Binary search for optimal length
+    local low, high = 1, #text
+    local result = ""
+
+    while low <= high do
+        local mid = math.floor((low + high) / 2)
+        local truncated = text:sub(1, mid) .. suffix
+        fontString:SetText(truncated)
+
+        if fontString:GetStringWidth() <= maxWidth then
+            result = truncated
+            low = mid + 1
+        else
+            high = mid - 1
+        end
+    end
+
+    return result ~= "" and result or (text:sub(1, 1) .. suffix)
 end
 
 return Utils
