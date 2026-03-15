@@ -19,6 +19,7 @@ local function InitializePatrons()
         { name = "Brian Huddleston", tier = "gold" },
         { name = "Michael Giallourakis", tier = "gold" },
         { name = "patreon.r1z2i", tier = "gold" },
+        { name = "Betty Hartigan", tier = "silver" },
         { name = "Bill Chirico", tier = "silver" },
         { name = "Chris Turner", tier = "silver" },
         { name = "James Toal", tier = "silver" },
