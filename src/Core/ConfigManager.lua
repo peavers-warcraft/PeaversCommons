@@ -168,17 +168,31 @@ ConfigManager.CommonDefaults = {
 
 function ConfigManager:New(addon, defaultSettings, options)
     local config = {}
-    
+
     if type(defaultSettings) == "table" and defaultSettings.savedVariablesName then
         options = defaultSettings
         defaultSettings = {}
     end
-    
+
     options = options or {}
-    
+
     config.addon = addon
-    config.defaults = defaultSettings or {}
-    
+
+    -- Merge common defaults with addon-specific defaults
+    local mergedDefaults = Utils.DeepCopy(ConfigManager.CommonDefaults)
+    if defaultSettings then
+        for k, v in pairs(defaultSettings) do
+            if type(v) == "table" and type(mergedDefaults[k]) == "table" then
+                for k2, v2 in pairs(v) do
+                    mergedDefaults[k][k2] = v2
+                end
+            else
+                mergedDefaults[k] = v
+            end
+        end
+    end
+    config.defaults = mergedDefaults
+
     local addonName
     if type(addon) == "string" then
         addonName = addon
@@ -522,21 +536,8 @@ end
 function ConfigManager:NewCharacterBased(addon, defaultSettings, options)
     options = options or {}
 
-    -- Merge common defaults with addon-specific defaults
-    local mergedDefaults = Utils.DeepCopy(ConfigManager.CommonDefaults)
-    if defaultSettings then
-        for k, v in pairs(defaultSettings) do
-            if type(v) == "table" and type(mergedDefaults[k]) == "table" then
-                for k2, v2 in pairs(v) do
-                    mergedDefaults[k][k2] = v2
-                end
-            else
-                mergedDefaults[k] = v
-            end
-        end
-    end
-
-    local config = self:New(addon, mergedDefaults, options)
+    -- CommonDefaults are now merged in ConfigManager:New()
+    local config = self:New(addon, defaultSettings, options)
 
     -- Character identification
     config.currentCharacter = nil

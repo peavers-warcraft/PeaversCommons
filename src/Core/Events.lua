@@ -54,26 +54,6 @@ eventFrame:SetScript("OnEvent", OnEvent)
 local updateHandlers = {}
 local updateTimers = {}
 
-function Events:RegisterOnUpdate(interval, handler, key)
-    key = key or handler
-    updateHandlers[key] = handler
-    updateTimers[key] = {
-        interval = interval,
-        elapsed = 0
-    }
-    
-    eventFrame:SetScript("OnUpdate", OnUpdate)
-end
-
-function Events:UnregisterOnUpdate(key)
-    updateHandlers[key] = nil
-    updateTimers[key] = nil
-    
-    if not next(updateTimers) then
-        eventFrame:SetScript("OnUpdate", nil)
-    end
-end
-
 local function OnUpdate(self, elapsed)
     for key, timer in pairs(updateTimers) do
         timer.elapsed = timer.elapsed + elapsed
@@ -83,6 +63,26 @@ local function OnUpdate(self, elapsed)
             end
             timer.elapsed = 0
         end
+    end
+end
+
+function Events:RegisterOnUpdate(interval, handler, key)
+    key = key or handler
+    updateHandlers[key] = handler
+    updateTimers[key] = {
+        interval = interval,
+        elapsed = 0
+    }
+
+    eventFrame:SetScript("OnUpdate", OnUpdate)
+end
+
+function Events:UnregisterOnUpdate(key)
+    updateHandlers[key] = nil
+    updateTimers[key] = nil
+
+    if not next(updateTimers) then
+        eventFrame:SetScript("OnUpdate", nil)
     end
 end
 
