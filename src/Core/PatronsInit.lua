@@ -32,6 +32,7 @@ local function InitializePatrons()
         { name = "Sarah Altrowitz", tier = "silver" },
         { name = "Spectro", tier = "silver" },
         { name = "tyronious88", tier = "silver" },
+        { name = "خالد عبدالله", tier = "silver" },
     })
 
     return true
