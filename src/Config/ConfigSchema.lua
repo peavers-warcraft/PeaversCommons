@@ -163,6 +163,7 @@ ConfigSchema.Common = {
     barSpacing = ConfigSchema.Integer(-5, 10, 2, { label = "Bar Spacing", category = "Bar" }),
     barAlpha = ConfigSchema.Number(0, 1, 0.05, 1.0, { label = "Bar Opacity", category = "Bar" }),
     barBgAlpha = ConfigSchema.Number(0, 1, 0.05, 0.7, { label = "Bar Background Opacity", category = "Bar" }),
+    textAlpha = ConfigSchema.Number(0, 1, 0.05, 1.0, { label = "Text Opacity", category = "Bar" }),
     barTexture = ConfigSchema.Texture({ label = "Bar Texture", category = "Bar" }),
 
     -- Font settings
