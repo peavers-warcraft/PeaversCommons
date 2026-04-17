@@ -56,7 +56,7 @@ function StatBar:New(parent, name, statType, config)
         fontSize = config.fontSize,
         fontOutline = config.fontOutline,
         fontShadow = config.fontShadow,
-        textAlpha = config.barAlpha or 1.0,
+        textAlpha = config.textAlpha or 1.0,
         name = name,
     })
 
@@ -207,7 +207,7 @@ function StatBar:UpdateFont()
         self.config.fontOutline,
         self.config.fontShadow
     )
-    self.textManager:SetTextAlpha(self.config.barAlpha or 1.0)
+    self.textManager:SetTextAlpha(self.config.textAlpha or 1.0)
     self:UpdateNameText()
 end
 

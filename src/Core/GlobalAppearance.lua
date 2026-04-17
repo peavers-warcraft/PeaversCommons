@@ -21,6 +21,7 @@ GlobalAppearance.Keys = {
     "barSpacing",
     "barAlpha",
     "barBgAlpha",
+    "textAlpha",
     "barTexture",
 
     -- Font settings

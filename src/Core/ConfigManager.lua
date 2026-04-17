@@ -137,6 +137,7 @@ ConfigManager.CommonDefaults = {
     barSpacing = 2,
     barBgAlpha = 0.5,
     barAlpha = 1.0,
+    textAlpha = 1.0,
     barTexture = "Interface\\TargetingFrame\\UI-StatusBar",
 
     -- Font settings (fontFace will be set based on locale)
