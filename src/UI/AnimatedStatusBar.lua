@@ -130,6 +130,13 @@ end
 -- @param value: New value
 -- @param noAnimation: Skip animation if true
 function AnimatedStatusBar:SetValue(value, noAnimation)
+    -- 12.0.5+: Secret values can't be clamped/compared/animated.
+    -- Pass directly to the WoW StatusBar widget which natively accepts secrets.
+    if issecretvalue and issecretvalue(value) then
+        self.frame.bar:SetValue(value)
+        return
+    end
+
     value = value or 0
 
     -- Clamp to min/max
