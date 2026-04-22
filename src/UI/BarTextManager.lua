@@ -230,8 +230,13 @@ function BarTextManager:GetName()
 end
 
 -- Set value text
+-- 12.0.5+: value may be a secret string from string.format; avoid `or` boolean test
 function BarTextManager:SetValue(value)
-    self.valueText = value or ""
+    if issecretvalue and issecretvalue(value) then
+        self.valueText = value
+    else
+        self.valueText = value or ""
+    end
     if self.valueElement then
         self.valueElement:SetText(self.valueText)
     end

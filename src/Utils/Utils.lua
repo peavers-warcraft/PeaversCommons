@@ -98,6 +98,10 @@ function Utils.GetCharacterKey()
 end
 
 function Utils.FormatPercent(value, decimals)
+    -- 12.0.5+: Secret values work with string.format for display
+    if issecretvalue and issecretvalue(value) then
+        return string.format("%.2f%%", value)
+    end
     -- Ensure value is a number
     if type(value) ~= "number" or value ~= value then  -- NaN check
         value = 0
@@ -119,6 +123,10 @@ function Utils.FormatPercent(value, decimals)
 end
 
 function Utils.FormatChange(value, decimals)
+    -- 12.0.5+: Secret values work with string.format (can't test sign)
+    if issecretvalue and issecretvalue(value) then
+        return string.format("%+.2f", value)
+    end
     -- Ensure value is a number
     if type(value) ~= "number" or value ~= value then  -- NaN check
         value = 0
