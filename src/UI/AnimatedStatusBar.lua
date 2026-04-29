@@ -170,6 +170,13 @@ function AnimatedStatusBar:AnimateToValue(newValue)
 
     local currentValue = self.frame.bar:GetValue()
 
+    -- If the bar's current value is a secret (e.g. previously set from a tainted
+    -- source), we can't do arithmetic on it. Skip animation in that case.
+    if issecretvalue and issecretvalue(currentValue) then
+        self.frame.bar:SetValue(newValue)
+        return
+    end
+
     if math.abs(newValue - currentValue) >= 0.5 then
         self.valueAnimation.startValue = currentValue
         self.valueAnimation.changeValue = newValue - currentValue
