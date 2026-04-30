@@ -338,16 +338,30 @@ function BarTextManager:UpdateFont(fontFace, fontSize, fontOutline, fontShadow)
     end
 end
 
--- Set text alpha for all elements
+-- Set text alpha for all elements (preserves any color set via SetTextColor)
 function BarTextManager:SetTextAlpha(alpha)
     self.textAlpha = alpha
+    local c = self.textColor or { r = 1, g = 1, b = 1 }
 
     if self.nameElement then
-        self.nameElement:SetTextColor(1, 1, 1, alpha)
+        self.nameElement:SetTextColor(c.r, c.g, c.b, alpha)
     end
 
     if self.valueElement then
-        self.valueElement:SetTextColor(1, 1, 1, alpha)
+        self.valueElement:SetTextColor(c.r, c.g, c.b, alpha)
+    end
+end
+
+-- Set text color for name and value elements (alpha is preserved separately)
+function BarTextManager:SetTextColor(r, g, b)
+    self.textColor = { r = r, g = g, b = b }
+
+    if self.nameElement then
+        self.nameElement:SetTextColor(r, g, b, self.textAlpha)
+    end
+
+    if self.valueElement then
+        self.valueElement:SetTextColor(r, g, b, self.textAlpha)
     end
 end
 
