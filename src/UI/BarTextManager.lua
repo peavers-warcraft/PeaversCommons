@@ -175,7 +175,8 @@ end
 -- Show change indicator with value and auto-fade
 -- @param change: The change amount
 -- @param formatFunc: Optional function(change) returns displayText, r, g, b
-function BarTextManager:ShowChange(change, formatFunc)
+-- @param persist: If true, skip the fade animation and keep the text visible
+function BarTextManager:ShowChange(change, formatFunc, persist)
     if not self.changeElement then return end
 
     -- Stop any running animation
@@ -206,8 +207,8 @@ function BarTextManager:ShowChange(change, formatFunc)
     self.changeElement:SetText(displayText)
     self.changeElement:SetTextColor(r, g, b)
 
-    -- Start fade animation
-    if self.changeAnimGroup then
+    -- Start fade animation unless persistent mode
+    if not persist and self.changeAnimGroup then
         self.changeAnimGroup:Play()
     end
 end
