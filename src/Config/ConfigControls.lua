@@ -313,7 +313,8 @@ end
 -- @return newY - new Y position after all controls
 function ConfigControls.CreateSection(parent, sectionName, keys, schema, config, y, baseSpacing, addonRef)
     local controlIndent = baseSpacing + 15
-    local sliderWidth = 400
+    local parentWidth = parent:GetWidth() or 0
+    local sliderWidth = parentWidth > 100 and (parentWidth - controlIndent - 30) or 400
 
     -- Section header
     local header, newY = ConfigUIUtils.CreateSectionHeader(parent, sectionName, baseSpacing, y)
@@ -343,7 +344,8 @@ end
 -- @return newY - new Y position after all controls
 function ConfigControls.CreateSubsection(parent, subsectionName, keys, schema, config, y, baseSpacing, addonRef)
     local controlIndent = baseSpacing + 15
-    local sliderWidth = 400
+    local parentWidth = parent:GetWidth() or 0
+    local sliderWidth = parentWidth > 100 and (parentWidth - controlIndent - 30) or 400
 
     -- Subsection label
     local label, newY = ConfigUIUtils.CreateSubsectionLabel(parent, subsectionName, controlIndent, y)
