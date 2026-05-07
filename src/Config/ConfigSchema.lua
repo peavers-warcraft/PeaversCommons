@@ -187,6 +187,7 @@ ConfigSchema.Common = {
             ["ALWAYS"] = "Always Show",
             ["PARTY_ONLY"] = "Show in Party Only",
             ["RAID_ONLY"] = "Show in Raid Only",
+            ["PARTY_AND_RAID"] = "Show in Party and Raid",
         },
         "ALWAYS",
         { label = "Display Mode", category = "Behavior" }

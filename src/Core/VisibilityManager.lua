@@ -11,6 +11,7 @@ PeaversCommons.VisibilityManager = VisibilityManager
 VisibilityManager.DISPLAY_ALWAYS = "ALWAYS"
 VisibilityManager.DISPLAY_PARTY_ONLY = "PARTY_ONLY"
 VisibilityManager.DISPLAY_RAID_ONLY = "RAID_ONLY"
+VisibilityManager.DISPLAY_PARTY_AND_RAID = "PARTY_AND_RAID"
 
 -- Updates frame visibility based on config settings
 -- @param frame: The frame to show/hide
@@ -34,6 +35,8 @@ function VisibilityManager:UpdateVisibility(frame, config, inCombat)
         if displayMode == self.DISPLAY_PARTY_ONLY and isInParty then
             shouldShow = true
         elseif displayMode == self.DISPLAY_RAID_ONLY and isInRaid then
+            shouldShow = true
+        elseif displayMode == self.DISPLAY_PARTY_AND_RAID and (isInParty or isInRaid) then
             shouldShow = true
         end
     end
@@ -78,6 +81,8 @@ function VisibilityManager:ShouldBeVisible(config, inCombat)
         if displayMode == self.DISPLAY_PARTY_ONLY and isInParty then
             shouldShow = true
         elseif displayMode == self.DISPLAY_RAID_ONLY and isInRaid then
+            shouldShow = true
+        elseif displayMode == self.DISPLAY_PARTY_AND_RAID and (isInParty or isInRaid) then
             shouldShow = true
         end
     end
