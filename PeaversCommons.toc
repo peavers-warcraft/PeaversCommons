@@ -14,6 +14,8 @@
 
 ## SavedVariables: PeaversCommonsDB
 
+Changelog.lua
+
 src\LibStub.lua
 
 src\Core\Core.lua
