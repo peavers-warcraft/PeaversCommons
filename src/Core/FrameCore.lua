@@ -158,6 +158,8 @@ function FrameCore:New(addon, options)
                 shouldShow = true
             elseif addon.Config.displayMode == "RAID_ONLY" and isInRaid then
                 shouldShow = true
+            elseif addon.Config.displayMode == "PARTY_AND_RAID" and (isInParty or isInRaid) then
+                shouldShow = true
             end
         end
         
