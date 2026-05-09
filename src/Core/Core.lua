@@ -17,6 +17,7 @@ PeaversCommons.FrameCore = {}
 PeaversCommons.FrameUtils = {}
 PeaversCommons.ConfigUIUtils = {}
 PeaversCommons.ConfigManager = {}
+PeaversCommons.ConfigRegistry = {}
 PeaversCommons.SettingsUI = {}
 
 PeaversCommons.BarManager = {}

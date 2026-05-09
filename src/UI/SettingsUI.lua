@@ -163,6 +163,47 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
     return nil
 end
 
+function SettingsUI:CreateRedirectPage(addonRef, addonName, displayName)
+    if not Settings or not Settings.RegisterCanvasLayoutCategory then return end
+
+    local panel = CreateFrame("Frame")
+    panel.name = addonName
+
+    panel.OnRefresh = function() end
+    panel.OnCommit = function() end
+    panel.OnDefault = function() end
+
+    local largeIcon = panel:CreateTexture(nil, "BACKGROUND")
+    largeIcon:SetTexture(ICON_PATH)
+    largeIcon:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    largeIcon:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+    largeIcon:SetAlpha(ICON_ALPHA)
+
+    local titleText = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    titleText:SetPoint("TOPLEFT", 16, -16)
+    titleText:SetText(displayName or addonName)
+    titleText:SetTextColor(1, 0.84, 0)
+
+    local message = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    message:SetPoint("TOPLEFT", 16, -50)
+    message:SetPoint("TOPRIGHT", -16, -50)
+    message:SetJustifyH("LEFT")
+    message:SetSpacing(4)
+    message:SetText("Please use PeaversConfig for all configuration.\n\nType |cff3abdf7/pconfig|r or |cff3abdf7/peavers|r to open the settings window.")
+
+    local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+    Settings.RegisterAddOnCategory(category)
+
+    addonRef.directCategory = category
+    addonRef.directCategoryID = category:GetID()
+
+    local globalAddon = _G[addonName]
+    if globalAddon then
+        globalAddon.directCategory = category
+        globalAddon.directCategoryID = category:GetID()
+    end
+end
+
 -- Function to get all registered addons
 function SettingsUI:GetRegisteredAddons()
     return registeredAddons
