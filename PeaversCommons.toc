@@ -1,4 +1,4 @@
-## Interface: 120000, 120001
+## Interface: 120001, 120005, 120007
 
 ## Title: |cff3abdf7Peavers|rCommons
 ## Notes: Common functionality for Peavers addons
@@ -14,9 +14,14 @@
 
 ## SavedVariables: PeaversCommonsDB
 
+## OptionalDeps: LibStub, CallbackHandler-1.0, AceDB-3.0
+
 Changelog.lua
 
-src\LibStub.lua
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\AceDB-3.0\AceDB-3.0.lua
+Libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 
 src\Core\Core.lua
 src\Core\Config.lua
@@ -27,8 +32,10 @@ src\Core\FrameLock.lua
 src\Core\VisibilityManager.lua
 src\Core\AddonInit.lua
 src\Core\FrameUtils.lua
+src\UI\Widgets.lua
 src\Core\ConfigUIUtils.lua
 src\Core\ConfigManager.lua
+src\Core\ConfigRegistry.lua
 src\Core\GlobalAppearance.lua
 src\Core\Patrons.lua
 src\Core\BarStyles.lua
@@ -38,6 +45,7 @@ src\Config\DefaultConfig.lua
 src\Config\ConfigSchema.lua
 src\Config\ConfigControls.lua
 src\Config\SettingsPanels.lua
+src\Config\SettingsObjects.lua
 src\Config\ConfigMigration.lua
 
 src\Utils\Utils.lua
