@@ -264,7 +264,7 @@ function SettingsObjects.FrameSettings(parent, config, y, opts)
     if not exclude.frameWidth then
         local schema = ConfigSchema.Common.frameWidth
         local slider = W:CreateSlider(parent, schema.label, {
-            min = schema.min, max = schema.max, step = 10,
+            min = schema.min, max = schema.max, step = schema.step,
             value = config.frameWidth or schema.default,
             width = width,
             onChange = MakeOnChange(config, "frameWidth", opts),
