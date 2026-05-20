@@ -11,6 +11,14 @@ local TitleBar = PeaversCommons.TitleBar
 local DEFAULT_FONT = "Fonts\\FRIZQT__.TTF"
 local DEFAULT_FONT_SIZE = 10
 
+-- Safely applies a font, falling back to the default when the asset is missing
+-- (e.g. a font path from another addon that isn't installed)
+local function SafeSetFont(fontString, fontFace, fontSize, fontOutline)
+    if not pcall(fontString.SetFont, fontString, fontFace, fontSize, fontOutline) then
+        fontString:SetFont(DEFAULT_FONT, fontSize, fontOutline)
+    end
+end
+
 --------------------------------------------------------------------------------
 -- Title Bar Creation
 --------------------------------------------------------------------------------
@@ -48,7 +56,7 @@ function TitleBar:Create(parentFrame, config, options)
 
     -- Title text
     local title = titleBar:CreateFontString(nil, "OVERLAY")
-    title:SetFont(fontFace, fontSize, fontOutline)
+    SafeSetFont(title, fontFace, fontSize, fontOutline)
     title:SetPoint("LEFT", titleBar, "LEFT", options.leftPadding or 5, 0)
     title:SetText(options.title or "Title")
     title:SetTextColor(1, 1, 1)
@@ -68,7 +76,7 @@ function TitleBar:Create(parentFrame, config, options)
 
     -- Subtitle/version text
     local subtitle = titleBar:CreateFontString(nil, "OVERLAY")
-    subtitle:SetFont(fontFace, fontSize, fontOutline)
+    SafeSetFont(subtitle, fontFace, fontSize, fontOutline)
     subtitle:SetPoint("LEFT", verticalLine, "RIGHT", 5, 0)
     subtitle:SetText(options.subtitle or ("v" .. (options.version or "1.0.0")))
     subtitle:SetTextColor(0.8, 0.8, 0.8)
@@ -112,8 +120,8 @@ function TitleBar:UpdateFont(fontFace, fontSize, fontOutline, fontShadow)
     fontOutline = fontOutline or (self.config.fontOutline and "OUTLINE" or "")
     fontShadow = fontShadow or self.config.fontShadow
 
-    self.title:SetFont(fontFace, fontSize, fontOutline)
-    self.subtitle:SetFont(fontFace, fontSize, fontOutline)
+    SafeSetFont(self.title, fontFace, fontSize, fontOutline)
+    SafeSetFont(self.subtitle, fontFace, fontSize, fontOutline)
 
     if fontShadow then
         self.title:SetShadowOffset(1, -1)
