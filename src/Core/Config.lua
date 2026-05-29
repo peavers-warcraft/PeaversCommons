@@ -18,12 +18,16 @@ function Config:Initialize()
     if not PeaversCommonsDB.config then
         PeaversCommonsDB.config = {}
     end
-    
+
     -- Load debug setting from saved variables if available
     if PeaversCommonsDB.config.debugEnabled ~= nil then
         Config.DEBUG_ENABLED = PeaversCommonsDB.config.debugEnabled
     end
-    
+
+    if PeaversCommonsDB.config.promoteInChat == nil then
+        PeaversCommonsDB.config.promoteInChat = false
+    end
+
     return true
 end
 
@@ -31,6 +35,7 @@ end
 function Config:Save()
     PeaversCommonsDB.config = PeaversCommonsDB.config or {}
     PeaversCommonsDB.config.debugEnabled = Config.DEBUG_ENABLED
+    PeaversCommonsDB.config.promoteInChat = PeaversCommonsDB.config.promoteInChat or false
     return true
 end
 

@@ -40,6 +40,7 @@ src\Core\GlobalAppearance.lua
 src\Core\Patrons.lua
 src\Core\BarStyles.lua
 src\Core\Debug.lua
+src\Core\Promoter.lua
 
 src\Config\DefaultConfig.lua
 src\Config\ConfigSchema.lua
