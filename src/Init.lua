@@ -8,6 +8,12 @@ eventFrame:SetScript("OnEvent", function(self, event, isInitialLogin, isReloadin
         C_Timer.After(0.5, function()
             print("|cff3abdf7Peavers|r: Thanks for using Peavers addons, checkout my latest tool |cff3abdf7wowcompare.io|r")
         end)
+
+        C_Timer.After(1, function()
+            if PeaversCommons.Promoter then
+                PeaversCommons.Promoter:Initialize()
+            end
+        end)
     end
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 end)
