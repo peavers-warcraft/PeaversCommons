@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: PeaversCommons
+  description: "A common library for Peavers addons providing shared utilities and UI components."
+  annotations:
+    github.com/project-slug: peavers-warcraft/PeaversCommons
+spec:
+  type: library
+  lifecycle: production
+  owner: peavers-warcraft
