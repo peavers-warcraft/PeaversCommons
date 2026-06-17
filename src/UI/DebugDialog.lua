@@ -280,9 +280,9 @@ function DebugDialog:Create()
     frame:Hide()
     self.frame = frame
 
-    frame.AddMessage = function(self, msg)
-        if self.messageFrame then
-            self.messageFrame:AddMessage(msg)
+    frame.AddMessage = function(_, msg)
+        if frame.messageFrame then
+            frame.messageFrame:AddMessage(msg)
         end
     end
 

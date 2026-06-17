@@ -5,17 +5,15 @@ local SettingsPanels = {}
 PeaversCommons.SettingsPanels = SettingsPanels
 
 -- Dependencies
-local ConfigSchema = PeaversCommons.ConfigSchema
 local ConfigControls = PeaversCommons.ConfigControls
 local ConfigUIUtils = PeaversCommons.ConfigUIUtils
-local DefaultConfig = PeaversCommons.DefaultConfig
 local FrameUtils = PeaversCommons.FrameUtils
 
 -- PanelBuilder class for fluent panel construction
 local PanelBuilder = {}
 PanelBuilder.__index = PanelBuilder
 
-function PanelBuilder:New(addonRef, config, schema)
+function PanelBuilder.New(_, addonRef, config, schema)
     local self = setmetatable({}, PanelBuilder)
     self.addonRef = addonRef
     self.config = config
@@ -96,7 +94,7 @@ function PanelBuilder:Build(content, startY, baseSpacing)
             y = y - 10 -- Add spacing after subsection
         elseif section.type == "custom" then
             -- Add section header
-            local header, newY = ConfigUIUtils.CreateSectionHeader(content, section.name, baseSpacing, y)
+            local _, newY = ConfigUIUtils.CreateSectionHeader(content, section.name, baseSpacing, y)
             y = newY - 10
 
             -- Call custom builder

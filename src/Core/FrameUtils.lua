@@ -160,34 +160,22 @@ function FrameUtils.CreateColorPicker(parent, name, label, x, y, initialColor, o
     end
 
     colorFrame:SetScript("OnClick", function()
-        local function ColorCallback(restore)
-            local newR, newG, newB
-            if restore then
-                newR, newG, newB = unpack(restore)
-            else
-                newR, newG, newB = ColorPickerFrame.Content.ColorPicker:GetColorRGB()
-            end
-
+        local function applyColor(newR, newG, newB)
             colorFrame:SetBackdropColor(newR, newG, newB)
-
             if onChange then
                 onChange(newR, newG, newB)
             end
         end
 
-        local r, g, b = colorFrame:GetBackdropColor()
+        local curR, curG, curB = colorFrame:GetBackdropColor()
 
-        ColorPickerFrame.func = ColorCallback
-        ColorPickerFrame.swatchFunc = ColorCallback
-        ColorPickerFrame.cancelFunc = ColorCallback
-        ColorPickerFrame.opacityFunc = nil
-        ColorPickerFrame.hasOpacity = false
-        ColorPickerFrame.previousValues = { r, g, b }
-
-        ColorPickerFrame.Content.ColorPicker:SetColorRGB(r, g, b)
-
-        ColorPickerFrame:Hide()
-        ColorPickerFrame:Show()
+        ColorPickerFrame:SetupColorPickerAndShow({
+            r = curR, g = curG, b = curB,
+            hasOpacity = false,
+            previousValues = { r = curR, g = curG, b = curB },
+            swatchFunc = function() applyColor(ColorPickerFrame:GetColorRGB()) end,
+            cancelFunc = function(previous) applyColor(previous.r, previous.g, previous.b) end,
+        })
     end)
 
     return colorFrame, colorLabel, y - 25

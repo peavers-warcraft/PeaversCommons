@@ -20,7 +20,8 @@
     "Libs",
     "libs",
     "tools",
-    ".release"
+    ".release",
+    "src/Templates"
   ],
   "workspace.checkThirdParty": false,
 

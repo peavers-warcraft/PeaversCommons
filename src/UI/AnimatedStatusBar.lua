@@ -78,7 +78,7 @@ function AnimatedStatusBar:CreateFrame(parent, options)
         bar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
         bar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
     else
-        bar:SetAllPoints(frame)
+        bar:SetAllPoints(frame --[[@as Frame]])
     end
     bar:SetMinMaxValues(self.minValue, self.maxValue)
     bar:SetValue(0)

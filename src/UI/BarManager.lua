@@ -64,7 +64,7 @@ function BarManager:CreateBars(parent, barDefinitions, config, StatBarClass)
     self:Clear()
 
     -- Get growth direction
-    local yMult, xMult, anchorPoint = self:GetGrowthDirection(config)
+    local yMult, _, anchorPoint = self:GetGrowthDirection(config)
 
     local barHeight = config.barHeight or 20
     local barSpacing = config.barSpacing or 0

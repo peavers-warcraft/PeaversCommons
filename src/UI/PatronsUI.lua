@@ -5,14 +5,13 @@ PeaversCommons.PatronsUI = PatronsUI
 
 -- Reference to other modules
 local Patrons = PeaversCommons.Patrons
-local Utils = PeaversCommons.Utils
 
 -- Constants for UI
 local PADDING = 16
 local SECTION_SPACING = 15
 
 -- Create a frame to display patron information
-function PatronsUI:CreatePatronsFrame(parentFrame)
+function PatronsUI.CreatePatronsFrame(_, parentFrame)
     -- Safety check
     if not parentFrame then
         return nil

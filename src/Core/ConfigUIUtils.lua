@@ -175,37 +175,22 @@ function ConfigUIUtils.CreateColorPicker(parent, name, label, x, y, initialColor
     end
 
     colorPicker:SetScript("OnClick", function()
-        local function ColorCallback(restore)
-            local newR, newG, newB
-            if restore then
-                newR, newG, newB = unpack(restore)
-            else
-                -- Get color using the latest API
-                newR, newG, newB = ColorPickerFrame.Content.ColorPicker:GetColorRGB()
-            end
-
+        local function applyColor(newR, newG, newB)
             colorPicker:SetBackdropColor(newR, newG, newB)
-
             if onColorChanged then
                 onColorChanged(newR, newG, newB)
             end
         end
 
-        local r, g, b = colorPicker:GetBackdropColor()
+        local curR, curG, curB = colorPicker:GetBackdropColor()
 
-        -- Set both func and swatchFunc for compatibility with different API versions
-        ColorPickerFrame.func = ColorCallback
-        ColorPickerFrame.swatchFunc = ColorCallback
-        ColorPickerFrame.cancelFunc = ColorCallback
-        ColorPickerFrame.opacityFunc = nil
-        ColorPickerFrame.hasOpacity = false
-        ColorPickerFrame.previousValues = { r, g, b }
-
-        -- Set color using the latest API
-        ColorPickerFrame.Content.ColorPicker:SetColorRGB(r, g, b)
-
-        ColorPickerFrame:Hide() -- Hide first to trigger OnShow handler
-        ColorPickerFrame:Show()
+        ColorPickerFrame:SetupColorPickerAndShow({
+            r = curR, g = curG, b = curB,
+            hasOpacity = false,
+            previousValues = { r = curR, g = curG, b = curB },
+            swatchFunc = function() applyColor(ColorPickerFrame:GetColorRGB()) end,
+            cancelFunc = function(previous) applyColor(previous.r, previous.g, previous.b) end,
+        })
     end)
 
     return colorContainer, colorPicker, resetButton, y - 35
@@ -299,7 +284,7 @@ function ConfigUIUtils.CreateGlobalAppearanceSection(parent, addonName, addon, x
     y = y - 25
 
     -- Checkbox to enable/disable global appearance
-    local checkbox = ConfigUIUtils.CreateCheckbox(
+    ConfigUIUtils.CreateCheckbox(
         parent,
         addonName .. "_UseGlobalAppearance",
         "Use Global Appearance",

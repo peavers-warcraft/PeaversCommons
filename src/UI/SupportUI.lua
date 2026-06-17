@@ -31,7 +31,7 @@ end
 local function CreateSupportPanel(addon)
     local addonName = addon.name
     local version = addon.version or "Unknown"
-    local iconPath = addon.iconPath or "Interface\\AddOns\\" .. addonName .. "\\src\\Media\\Icon"
+    local iconPath = addon.iconPath or ("Interface\\AddOns\\" .. addonName .. "\\src\\Media\\Icon")
 
     local panel = CreateFrame("Frame")
     panel.name = "Support"
@@ -114,11 +114,11 @@ function SupportUI:InitializeAddonSupport(addon)
             mainPanel.name = addon.name
 
             mainPanel.layoutIndex = 1
-            mainPanel.OnShow = function(self) return true end
+            mainPanel.OnShow = function() return true end
 
-            local category = Settings.RegisterCanvasLayoutCategory(mainPanel, mainPanel.name)
-            if category then
-                addon.mainCategory = category
+            local registeredCategory = Settings.RegisterCanvasLayoutCategory(mainPanel, mainPanel.name)
+            if registeredCategory then
+                addon.mainCategory = registeredCategory
                 addon.mainCategory.ID = mainPanel.name
                 Settings.RegisterAddOnCategory(addon.mainCategory)
             else

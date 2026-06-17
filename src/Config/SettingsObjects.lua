@@ -5,7 +5,6 @@ PeaversCommons.SettingsObjects = SettingsObjects
 local DefaultConfig = PeaversCommons.DefaultConfig
 local ConfigSchema = PeaversCommons.ConfigSchema
 local W = PeaversCommons.Widgets
-local C = W.Colors
 
 local CONTROL_SPACING = 8
 local SECTION_BOTTOM_SPACING = 20

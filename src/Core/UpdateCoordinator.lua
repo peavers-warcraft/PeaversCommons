@@ -170,7 +170,6 @@ end
 -- @param addon The addon namespace (optional, for storing inCombat flag)
 function UpdateCoordinator:RegisterCombatEvents(addon)
     local frame = CreateFrame("Frame")
-    local self = self
 
     frame:RegisterEvent("PLAYER_REGEN_DISABLED")
     frame:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -211,10 +210,7 @@ end
 -- Checks if there are pending updates
 -- @return boolean
 function UpdateCoordinator:HasPendingUpdates()
-    for _ in pairs(self.pendingUpdates) do
-        return true
-    end
-    return false
+    return next(self.pendingUpdates) ~= nil
 end
 
 -- Gets the current combat state

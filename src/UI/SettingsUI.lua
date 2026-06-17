@@ -3,9 +3,6 @@ local PeaversCommons = _G.PeaversCommons
 local SettingsUI = {}
 PeaversCommons.SettingsUI = SettingsUI
 
--- Get reference to other modules
-local Utils = PeaversCommons.Utils
-
 -- Track registered addons
 local registeredAddons = {}
 
@@ -19,8 +16,6 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
     if not addonRef or not addonName then
         return false
     end
-
-    options = options or {}
 
     -- Track this addon if not already registered
     if not registeredAddons[addonName] then

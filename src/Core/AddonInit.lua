@@ -120,7 +120,7 @@ function AddonInit:CreateSettingsPages(addon, addonName, displayName, descriptio
     delay = delay or 0.5
 
     C_Timer.After(delay, function()
-        local mainPanel, settingsPanel = PeaversCommons.SettingsUI:CreateSettingsPages(
+        local _, settingsPanel = PeaversCommons.SettingsUI:CreateSettingsPages(
             addon,
             addonName,
             displayName,
@@ -134,8 +134,6 @@ function AddonInit:CreateSettingsPages(addon, addonName, displayName, descriptio
                 addon.ConfigUI:RefreshUI()
             end)
         end
-
-        return mainPanel, settingsPanel
     end)
 end
 

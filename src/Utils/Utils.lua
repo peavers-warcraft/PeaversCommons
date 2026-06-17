@@ -73,9 +73,9 @@ function Utils.GetPlayerInfo()
     local level = UnitLevel("player")
     
     local specIndex = GetSpecialization()
-    local specID, specName, specDesc, specIcon
+    local specID, specName
     if specIndex then
-        specID, specName, specDesc, specIcon = GetSpecializationInfo(specIndex)
+        specID, specName = GetSpecializationInfo(specIndex)
     end
     
     return {

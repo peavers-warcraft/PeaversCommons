@@ -167,7 +167,7 @@ ConfigManager.CommonDefaults = {
 -- ConfigManager Instance Methods
 --------------------------------------------------------------------------------
 
-function ConfigManager:New(addon, defaultSettings, options)
+function ConfigManager.New(cls, addon, defaultSettings, options)
     local config = {}
 
     if type(defaultSettings) == "table" and defaultSettings.savedVariablesName then
@@ -343,7 +343,7 @@ function ConfigManager:New(addon, defaultSettings, options)
     -- Enable global appearance sync for this addon
     -- @param addonName: Unique name for registration
     -- @param callback: Function(key, value) called when global setting changes
-    function config:EnableGlobalAppearance(addonName, callback)
+    function config:EnableGlobalAppearance(registrationName, callback)
         self.useGlobalAppearance = true
 
         -- Initialize GlobalAppearance if needed
@@ -352,7 +352,7 @@ function ConfigManager:New(addon, defaultSettings, options)
             PeaversCommons.GlobalAppearance:SyncToConfig(self)
 
             -- Register for future updates
-            PeaversCommons.GlobalAppearance:RegisterAddon(addonName, self, callback)
+            PeaversCommons.GlobalAppearance:RegisterAddon(registrationName, self, callback)
         end
 
         self:Save()
@@ -360,11 +360,11 @@ function ConfigManager:New(addon, defaultSettings, options)
 
     -- Disable global appearance sync for this addon
     -- @param addonName: The name used during registration
-    function config:DisableGlobalAppearance(addonName)
+    function config:DisableGlobalAppearance(registrationName)
         self.useGlobalAppearance = false
 
         if PeaversCommons.GlobalAppearance then
-            PeaversCommons.GlobalAppearance:UnregisterAddon(addonName)
+            PeaversCommons.GlobalAppearance:UnregisterAddon(registrationName)
         end
 
         self:Save()
@@ -396,7 +396,7 @@ function ConfigManager:New(addon, defaultSettings, options)
     return config
 end
 
-function ConfigManager:NewProfileBased(addon, defaultSettings, options)
+function ConfigManager.NewProfileBased(cls, addon, defaultSettings, options)
     if type(defaultSettings) == "table" and defaultSettings.savedVariablesName then
         options = defaultSettings
         defaultSettings = {}
@@ -404,12 +404,11 @@ function ConfigManager:NewProfileBased(addon, defaultSettings, options)
     
     options = options or {}
     
-    local config = self:New(addon, defaultSettings, options)
-    
+    local config = cls:New(addon, defaultSettings, options)
+
     config.currentProfile = "Default"
     config.profiles = config.profiles or {}
-    
-    local originalSave = config.Save
+
     function config:Save()
         if not _G[self.dbName] then
             _G[self.dbName] = {
@@ -438,7 +437,6 @@ function ConfigManager:NewProfileBased(addon, defaultSettings, options)
         return true
     end
     
-    local originalLoad = config.Load
     function config:Load()
         if not _G[self.dbName] then
             return false
@@ -534,11 +532,11 @@ end
 -- Creates a config that stores settings per character (Name-Realm)
 --------------------------------------------------------------------------------
 
-function ConfigManager:NewCharacterBased(addon, defaultSettings, options)
+function ConfigManager.NewCharacterBased(cls, addon, defaultSettings, options)
     options = options or {}
 
     -- CommonDefaults are now merged in ConfigManager:New()
-    local config = self:New(addon, defaultSettings, options)
+    local config = cls:New(addon, defaultSettings, options)
 
     -- Character identification
     config.currentCharacter = nil
@@ -664,10 +662,10 @@ end
 -- (like PeaversDynamicStats uses)
 --------------------------------------------------------------------------------
 
-function ConfigManager:NewCharacterSpecBased(addon, defaultSettings, options)
+function ConfigManager.NewCharacterSpecBased(cls, addon, defaultSettings, options)
     options = options or {}
 
-    local config = self:NewCharacterBased(addon, defaultSettings, options)
+    local config = cls:NewCharacterBased(addon, defaultSettings, options)
 
     -- Add spec tracking
     config.currentSpec = nil
@@ -812,7 +810,7 @@ end
 -- Maintains backward-compatible config.key access via metatable proxy.
 --------------------------------------------------------------------------------
 
-function ConfigManager:NewWithAceDB(addon, defaultSettings, options)
+function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
     options = options or {}
 
     if type(defaultSettings) == "table" and defaultSettings.savedVariablesName then
@@ -891,7 +889,6 @@ function ConfigManager:NewWithAceDB(addon, defaultSettings, options)
 
         -- Old flat format: { barHeight = 20, fontSize = 9, ... }
         -- Or old profile format: { profiles = { ["Default"] = {...} }, currentProfile = "..." }
-        local oldData = {}
         local hasOldProfiles = sv.profiles and type(sv.profiles) == "table"
 
         if hasOldProfiles then

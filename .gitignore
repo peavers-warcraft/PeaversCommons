@@ -1,3 +1,7 @@
 .idea
 *.iml
 .DS_Store
+
+# wow-api validation artifacts (luacheck/LuaLS local runs)
+.validate
+.luals-log

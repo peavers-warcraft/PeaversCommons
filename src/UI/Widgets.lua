@@ -58,7 +58,7 @@ function W:CreateSectionHeader(parent, text, x, y)
     label:SetPoint("BOTTOMLEFT", 0, 4)
     label:SetText(text)
     label:SetTextColor(unpack(C.gold))
-    label:SetFont(label:GetFont(), 11, "")
+    label:SetFont(label:GetFont() --[[@as string]], 11, "")
 
     local line = container:CreateTexture(nil, "ARTWORK")
     line:SetPoint("BOTTOMLEFT", 0, 0)
@@ -69,7 +69,7 @@ function W:CreateSectionHeader(parent, text, x, y)
     return container, y - 24
 end
 
-function W:CreateCollapsibleSection(parent, title, opts)
+function W.CreateCollapsibleSection(_, parent, title, opts)
     opts = opts or {}
     local defaultOpen = opts.defaultOpen ~= false
 
@@ -144,7 +144,7 @@ function W:CreateCollapsibleSection(parent, title, opts)
     return frame
 end
 
-function W:CreateButton(parent, text, opts)
+function W.CreateButton(_, parent, text, opts)
     opts = opts or {}
     local variant = opts.variant or "secondary"
     local width = opts.width or 120
@@ -193,7 +193,7 @@ function W:CreateButton(parent, text, opts)
     return btn
 end
 
-function W:CreateCheckbox(parent, labelText, opts)
+function W.CreateCheckbox(_, parent, labelText, opts)
     opts = opts or {}
 
     local frame = CreateFrame("Frame", opts.name, parent)
@@ -264,7 +264,7 @@ function W:CreateCheckbox(parent, labelText, opts)
     return frame
 end
 
-function W:CreateToggle(parent, labelText, opts)
+function W.CreateToggle(_, parent, labelText, opts)
     opts = opts or {}
 
     local frame = CreateFrame("Frame", opts.name, parent)
@@ -330,7 +330,7 @@ function W:CreateToggle(parent, labelText, opts)
     return frame
 end
 
-function W:CreateSlider(parent, labelText, opts)
+function W.CreateSlider(_, parent, labelText, opts)
     opts = opts or {}
     local min = opts.min or 0
     local max = opts.max or 100
@@ -366,7 +366,7 @@ function W:CreateSlider(parent, labelText, opts)
     badgeBg:SetHeight(16)
     badgeBg:SetFrameLevel(frame:GetFrameLevel())
     badgeBg:EnableMouse(false)
-    valueText:SetParent(badgeBg)
+    valueText:SetParent(badgeBg --[[@as Frame]])
     valueText:ClearAllPoints()
     valueText:SetPoint("CENTER", badgeBg, "CENTER", 0, 0)
     badgeBg:ClearAllPoints()
@@ -450,7 +450,7 @@ function W:CreateSlider(parent, labelText, opts)
     return frame
 end
 
-function W:CreateDropdown(parent, labelText, opts)
+function W.CreateDropdown(_, parent, labelText, opts)
     opts = opts or {}
     local options = opts.options or {}
     local selected = opts.selected
@@ -577,7 +577,7 @@ function W:CreateDropdown(parent, labelText, opts)
     return frame
 end
 
-function W:CreateInput(parent, labelText, opts)
+function W.CreateInput(_, parent, labelText, opts)
     opts = opts or {}
     local width = opts.width or 240
 
@@ -641,7 +641,7 @@ function W:CreateInput(parent, labelText, opts)
     return frame
 end
 
-function W:CreateColorPicker(parent, labelText, opts)
+function W.CreateColorPicker(_, parent, labelText, opts)
     opts = opts or {}
     local r, g, b = opts.r or 1, opts.g or 1, opts.b or 1
 
@@ -670,26 +670,20 @@ function W:CreateColorPicker(parent, labelText, opts)
     UpdateHex()
 
     swatch:SetScript("OnClick", function()
-        local function ColorCallback(restore)
-            if restore then
-                r, g, b = unpack(restore)
-            else
-                r, g, b = ColorPickerFrame.Content.ColorPicker:GetColorRGB()
-            end
+        local function applyColor(newR, newG, newB)
+            r, g, b = newR, newG, newB
             swatch:SetBackdropColor(r, g, b, 1)
             UpdateHex()
             if opts.onChange then opts.onChange(r, g, b) end
         end
 
-        ColorPickerFrame.func = ColorCallback
-        ColorPickerFrame.swatchFunc = ColorCallback
-        ColorPickerFrame.cancelFunc = ColorCallback
-        ColorPickerFrame.opacityFunc = nil
-        ColorPickerFrame.hasOpacity = false
-        ColorPickerFrame.previousValues = { r, g, b }
-        ColorPickerFrame.Content.ColorPicker:SetColorRGB(r, g, b)
-        ColorPickerFrame:Hide()
-        ColorPickerFrame:Show()
+        ColorPickerFrame:SetupColorPickerAndShow({
+            r = r, g = g, b = b,
+            hasOpacity = false,
+            previousValues = { r = r, g = g, b = b },
+            swatchFunc = function() applyColor(ColorPickerFrame:GetColorRGB()) end,
+            cancelFunc = function(previous) applyColor(previous.r, previous.g, previous.b) end,
+        })
     end)
 
     swatch:SetScript("OnEnter", function() swatch:SetBackdropBorderColor(unpack(C.borderHover)) end)
@@ -721,7 +715,7 @@ function W:CreateLabel(parent, text, opts)
     return label
 end
 
-function W:CreateTabBar(parent, tabs, opts)
+function W.CreateTabBar(_, parent, tabs, opts)
     opts = opts or {}
     local height = opts.height or 30
 

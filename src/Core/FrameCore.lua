@@ -2,7 +2,7 @@ local PeaversCommons = _G.PeaversCommons
 local FrameCore = {}
 PeaversCommons.FrameCore = FrameCore
 
-function FrameCore:New(addon, options)
+function FrameCore.New(_, addon, options)
     local core = {}
     
     options = options or {}
@@ -67,14 +67,14 @@ function FrameCore:New(addon, options)
         if locked then
             core.frame:SetMovable(false)
             core.frame:EnableMouse(true)
-            core.frame:RegisterForDrag("")
+            core.frame:RegisterForDrag()
             core.frame:SetScript("OnDragStart", nil)
             core.frame:SetScript("OnDragStop", nil)
             
             if core.contentFrame then
                 core.contentFrame:SetMovable(false)
                 core.contentFrame:EnableMouse(true)
-                core.contentFrame:RegisterForDrag("")
+                core.contentFrame:RegisterForDrag()
                 core.contentFrame:SetScript("OnDragStart", nil)
                 core.contentFrame:SetScript("OnDragStop", nil)
             end

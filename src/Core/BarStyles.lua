@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "PeaversCommons-1.0", 3
+local MAJOR = "PeaversCommons-1.0"
 local PeaversCommons = LibStub and LibStub(MAJOR) or {}
 
 -- Initialize BarStyles namespace with default configuration values

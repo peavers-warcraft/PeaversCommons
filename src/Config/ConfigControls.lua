@@ -8,8 +8,6 @@ PeaversCommons.ConfigControls = ConfigControls
 local ConfigSchema = PeaversCommons.ConfigSchema
 local DefaultConfig = PeaversCommons.DefaultConfig
 local ConfigUIUtils = PeaversCommons.ConfigUIUtils
-local FrameUtils = PeaversCommons.FrameUtils
-local Utils = PeaversCommons.Utils
 
 -- Storage for bound controls that need refreshing
 ConfigControls.boundControls = {}
@@ -56,7 +54,7 @@ function ConfigControls.CreateBoundSlider(parent, key, label, schema, config, y,
         currentValue = schema.default or schema.min or 0
     end
 
-    local container, slider, labelText = ConfigUIUtils.CreateSlider(
+    local container, slider = ConfigUIUtils.CreateSlider(
         parent,
         "PeaversSlider" .. key,
         label,
@@ -194,7 +192,7 @@ function ConfigControls.CreateBoundColorPicker(parent, key, label, schema, confi
         end
     end
 
-    local colorContainer, colorPicker, resetButton, newY = ConfigUIUtils.CreateColorPicker(
+    local _, colorPicker, _, newY = ConfigUIUtils.CreateColorPicker(
         parent,
         "PeaversColorPicker" .. key,
         label,
@@ -317,15 +315,14 @@ function ConfigControls.CreateSection(parent, sectionName, keys, schema, config,
     local sliderWidth = parentWidth > 100 and (parentWidth - controlIndent - 30) or 400
 
     -- Section header
-    local header, newY = ConfigUIUtils.CreateSectionHeader(parent, sectionName, baseSpacing, y)
+    local _, newY = ConfigUIUtils.CreateSectionHeader(parent, sectionName, baseSpacing, y)
     y = newY - 10
 
     -- Create controls for each key
     for _, key in ipairs(keys) do
         local keySchema = schema[key]
         if keySchema then
-            local control
-            control, y = ConfigControls.CreateFromSchema(parent, key, keySchema, config, y, controlIndent, sliderWidth, addonRef)
+            _, y = ConfigControls.CreateFromSchema(parent, key, keySchema, config, y, controlIndent, sliderWidth, addonRef)
         end
     end
 
@@ -348,15 +345,14 @@ function ConfigControls.CreateSubsection(parent, subsectionName, keys, schema, c
     local sliderWidth = parentWidth > 100 and (parentWidth - controlIndent - 30) or 400
 
     -- Subsection label
-    local label, newY = ConfigUIUtils.CreateSubsectionLabel(parent, subsectionName, controlIndent, y)
+    local _, newY = ConfigUIUtils.CreateSubsectionLabel(parent, subsectionName, controlIndent, y)
     y = newY - 8
 
     -- Create controls for each key
     for _, key in ipairs(keys) do
         local keySchema = schema[key]
         if keySchema then
-            local control
-            control, y = ConfigControls.CreateFromSchema(parent, key, keySchema, config, y, controlIndent, sliderWidth, addonRef)
+            _, y = ConfigControls.CreateFromSchema(parent, key, keySchema, config, y, controlIndent, sliderWidth, addonRef)
         end
     end
 
