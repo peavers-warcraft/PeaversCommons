@@ -6,7 +6,16 @@ eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 eventFrame:SetScript("OnEvent", function(self, event, isInitialLogin, isReloadingUi)
     if isInitialLogin or isReloadingUi then
         C_Timer.After(0.5, function()
-            print("|cff3abdf7Peavers|r: Thanks for using Peavers addons, checkout my latest tool |cff3abdf7wowcompare.io|r")
+            print(" ")
+            print(
+                "|cff3abdf7Peavers|r|cfffbbf24Addons|r|cff808080:|r " ..
+                "|cff3abdf7peavers.io|r " ..
+                "|cff808080•|r " ..
+                "|cff4ade80wowcompare.io|r " ..
+                "|cff808080•|r " ..
+                "|cfffbbf24addonsentry.io|r"
+            )
+            print(" ")
         end)
 
         C_Timer.After(1, function()
