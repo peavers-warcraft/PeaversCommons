@@ -15,18 +15,23 @@ on:
 permissions:
   contents: write
   actions: write
+  id-token: write
 
 jobs:
   update-patrons:
-    runs-on: ubuntu-latest
+    runs-on: warcraft-runners
     # Only run on the original repository, not forks
     if: github.repository == 'peavers-warcraft/PeaversCommons'
     steps:
+      - name: Mint GitHub App token (Vault OIDC)
+        id: ghtoken
+        uses: peavers/.github/actions/gh-app-token@main
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ steps.ghtoken.outputs.token }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
