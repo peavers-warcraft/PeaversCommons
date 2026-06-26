@@ -27,6 +27,22 @@ jobs:
         id: ghtoken
         uses: peavers/.github/actions/gh-app-token@main
 
+      # Patreon creds live in Vault (single source of truth). DISCORD_WEBHOOK_URL
+      # stays a GitHub secret on purpose (also used by notify-failure on ubuntu-latest).
+      - name: Fetch Patreon secrets from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: https://vault.vault.svc.cluster.local:8200
+          method: jwt
+          path: jwt-github
+          role: ci
+          jwtGithubAudience: https://vault.internal
+          tlsSkipVerify: true
+          exportToken: false
+          secrets: |
+            kv/data/cluster/_shared/patreon access_token | PATREON_ACCESS_TOKEN ;
+            kv/data/cluster/_shared/patreon campaign_id  | PATREON_CAMPAIGN_ID
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -41,8 +57,7 @@ jobs:
       - name: Fetch patrons from Patreon
         id: update
         env:
-          PATREON_ACCESS_TOKEN: ${{ secrets.PATREON_ACCESS_TOKEN }}
-          PATREON_CAMPAIGN_ID: ${{ secrets.PATREON_CAMPAIGN_ID }}
+          # PATREON_ACCESS_TOKEN / PATREON_CAMPAIGN_ID exported to env by the Vault step above.
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python scripts/update_patrons.py
 
