@@ -43,7 +43,12 @@ end
 
 local function OnEvent(self, event, ...)
     if eventHandlers[event] then
-        for _, handler in ipairs(eventHandlers[event]) do
+        -- Iterate a snapshot so handlers can unregister themselves mid-dispatch
+        local handlers = {}
+        for i, handler in ipairs(eventHandlers[event]) do
+            handlers[i] = handler
+        end
+        for _, handler in ipairs(handlers) do
             handler(event, ...)
         end
     end
@@ -89,10 +94,11 @@ end
 function Events:AnnounceLoaded(addon, customMessage)
     local message = customMessage or "Addon loaded"
     
-    self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
+    local function announceHandler()
         Utils.Print(addon, message)
-        self:UnregisterEvent("PLAYER_ENTERING_WORLD")
-    end)
+        self:UnregisterEvent("PLAYER_ENTERING_WORLD", announceHandler)
+    end
+    self:RegisterEvent("PLAYER_ENTERING_WORLD", announceHandler)
 end
 
 function Events:RegisterAddonForSupport(addon)
@@ -122,29 +128,31 @@ function Events:Init(addonName, initCallback, options)
         end
     end
     
-    self:RegisterEvent("ADDON_LOADED", function(event, loadedAddon)
+    local function onAddonLoaded(event, loadedAddon)
         if loadedAddon == addonName and not addonInitialized then
             addonInitialized = true
-            
+
             local addon = _G[addonName] or { name = addonName }
-            
+
             if not addon.name then addon.name = addonName end
-            
+
             if not suppressSupportUI then
                 self:RegisterAddonForSupport(addon)
             end
-            
+
             if initCallback then
                 initCallback()
             end
-            
+
             if not suppressAnnouncement then
                 self:AnnounceLoaded(addon, ": " ..  announceMessage)
             end
-            
-            self:UnregisterEvent("ADDON_LOADED")
+
+            -- Only remove this handler; other addons' ADDON_LOADED handlers must survive
+            self:UnregisterEvent("ADDON_LOADED", onAddonLoaded)
         end
-    end)
+    end
+    self:RegisterEvent("ADDON_LOADED", onAddonLoaded)
     
     local initialized = false
     self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
