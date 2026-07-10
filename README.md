@@ -2,10 +2,9 @@
 
 A common library for Peavers addons providing shared utilities and UI components.
 
-**Website:** [peavers.io](https://peavers.io) | **Addon Backup:** [vault.peavers.io](https://vault.peavers.io) | **Issues:** [GitHub](https://github.com/peavers-warcraft/PeaversCommons/issues)
-
 ## Features
 
+<!-- peavers:features -->
 - Standardized event handling
 - Slash command registration
 - Utility functions (formatting, table operations, player info)
@@ -13,48 +12,29 @@ A common library for Peavers addons providing shared utilities and UI components
 - Configuration UI framework
 - Settings integration
 - Patron support system
+<!-- /peavers:features -->
 
-## Installation
-
-1. Download from [CurseForge](https://www.curseforge.com/wow/addons/peaverscommons)
-2. This library is required by other Peavers addons
-
+<!-- peavers:custom -->
 ## For Developers
 
 Add as a dependency in your .toc file:
 
 ```
-## Dependencies: PeaversCommons
-```
+<!-- /peavers:custom -->
 
-### Basic Usage
+## Installation
 
-```lua
-local addonName, MyAddon = ...
-local PeaversCommons = _G.PeaversCommons
+### Recommended: PeaversUpdater
 
--- Initialize addon
-PeaversCommons.Events:Init(addonName, function()
-    -- Register events
-    PeaversCommons.Events:RegisterEvent("PLAYER_ENTERING_WORLD", function()
-        -- Your event handler
-    end)
-end)
+Download and install [PeaversUpdater](https://github.com/peavers-warcraft/PeaversUpdater/releases/latest), the desktop updater for the whole Peavers collection. It installs PeaversCommons together with its required dependencies and delivers updates before they reach CurseForge.
 
--- Register slash commands
-PeaversCommons.SlashCommands:Register(addonName, "myslash", {
-    default = function() end,
-    config = function() end
-})
-```
+### Alternative: CurseForge
 
-### Available Modules
+1. Download from [CurseForge](https://www.curseforge.com/wow/addons/peaverscommons)
+2. Ensure [PeaversCommons](https://www.curseforge.com/wow/addons/peaverscommons) is also installed
+3. Ensure [PeaversConfig](https://www.curseforge.com/wow/addons/peaversconfig) is also installed
+4. Enable the addon on the character selection screen
 
-- **Events**: Event handling and OnUpdate timers
-- **SlashCommands**: Slash command registration
-- **Utils**: Debug, Print, formatting, table utilities
-- **FrameUtils**: UI element creation (buttons, sliders, dropdowns, etc.)
-- **ConfigUIUtils**: Settings panel creation
-- **ConfigManager**: Configuration handling with defaults
-- **SettingsUI**: WoW Settings panel integration
-- **Patrons**: Patron support system
+---
+
+*Part of the [Peavers](https://peavers.io) addon collection · [Report an issue](https://github.com/peavers-warcraft/PeaversCommons/issues) · [Support development on Patreon](https://www.patreon.com/Peavers)*
