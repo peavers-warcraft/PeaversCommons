@@ -182,7 +182,7 @@ function PatronsUI:InitializeForAllAddons()
 
     local knownAddons = {
         "PeaversDynamicStats", "PeaversAlwaysSquare", "PeaversActionPerMinute",
-        "PeaversItemLevel", "PeaversRemembersYou", "PeaversSafeList",
+        "PeaversItemLevel", "PeaversRemembersYou",
         "PeaversTalents", "PeaversTalentsData"
     }
 
