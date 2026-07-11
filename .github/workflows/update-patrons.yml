@@ -27,8 +27,11 @@ jobs:
         id: ghtoken
         uses: peavers/.github/actions/gh-app-token@main
 
-      # Patreon creds live in Vault (single source of truth). DISCORD_WEBHOOK_URL
-      # stays a GitHub secret on purpose (also used by notify-failure on ubuntu-latest).
+      # Patreon access token comes from the oauthapp secrets engine, which
+      # auto-refreshes it against Patreon (creator tokens expire monthly, and the
+      # refresh grant rotates the pair — only the engine may refresh). Campaign id
+      # is plain config in KV. DISCORD_WEBHOOK_URL stays a GitHub secret on
+      # purpose (also used by notify-failure on ubuntu-latest).
       - name: Fetch Patreon secrets from Vault
         uses: hashicorp/vault-action@v3
         with:
@@ -40,8 +43,8 @@ jobs:
           tlsSkipVerify: true
           exportToken: false
           secrets: |
-            kv/data/cluster/_shared/patreon access_token | PATREON_ACCESS_TOKEN ;
-            kv/data/cluster/_shared/patreon campaign_id  | PATREON_CAMPAIGN_ID
+            oauth2/creds/patreon access_token | PATREON_ACCESS_TOKEN ;
+            kv/data/cluster/_shared/patreon campaign_id | PATREON_CAMPAIGN_ID
 
       - name: Checkout code
         uses: actions/checkout@v4
