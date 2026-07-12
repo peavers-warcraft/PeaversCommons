@@ -1,6 +1,6 @@
 # PeaversCommons
 
-[![AddonSentry](https://api.addonsentry.io/api/public/repos/peavers-warcraft/PeaversCommons/badge.svg)](https://addonsentry.io/dashboard/peavers-warcraft/PeaversCommons)
+[![AddonSentry](https://addonsentry.io/api/public/repos/peavers-warcraft/PeaversCommons/badge.svg)](https://addonsentry.io/dashboard/peavers-warcraft/PeaversCommons)
 
 A common library for Peavers addons providing shared utilities and UI components.
 
