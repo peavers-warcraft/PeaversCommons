@@ -5,3 +5,6 @@
 # wow-api validation artifacts (luacheck/LuaLS local runs)
 .validate
 .luals-log
+
+# dev-only contact sheet from scripts/generate_media.py
+scripts/_preview.png

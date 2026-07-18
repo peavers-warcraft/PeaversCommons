@@ -2,6 +2,12 @@ local PeaversCommons = _G.PeaversCommons
 local FrameUtils = {}
 PeaversCommons.FrameUtils = FrameUtils
 
+-- Shared palette. FrameUtils backs the legacy ConfigUIUtils helpers, which is
+-- how PeaversConsumables and PeaversBestInSlot build their entire settings page,
+-- so theming here is what brings those addons in line without touching them.
+-- Theme.lua is loaded immediately before this file in the .toc.
+local C = PeaversCommons.Theme.Colors
+
 function FrameUtils.GetGlobal(name)
     if name and type(name) == "string" then
         return _G[name]
@@ -12,8 +18,9 @@ end
 function FrameUtils.CreateSectionHeader(parent, text, x, y)
     local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", x, y)
-    header:SetText(text)
-    header:SetTextColor(1, 0.82, 0)
+    header:SetText(tostring(text):upper())
+    header:SetTextColor(unpack(C.eyebrow))
+    header:SetFont(header:GetFont(), 10, "")
     header:SetWidth(400)
     header:SetJustifyH("LEFT")
     return header, y - 25
@@ -23,13 +30,17 @@ function FrameUtils.CreateLabel(parent, text, x, y, fontObject)
     local label = parent:CreateFontString(nil, "ARTWORK", fontObject or "GameFontNormal")
     label:SetPoint("TOPLEFT", x, y)
     label:SetText(text)
-    label:SetTextColor(1, 1, 1)
+    label:SetTextColor(unpack(C.text))
     return label, y - 20
 end
 
 function FrameUtils.CreateCheckbox(parent, name, text, x, y, initialValue, textColor, onClick)
     local checkbox = CreateFrame("CheckButton", name, parent, "InterfaceOptionsCheckButtonTemplate")
     checkbox:SetPoint("TOPLEFT", x, y)
+
+    -- Replace the stock bevelled box and gold tick with the flat themed one.
+    -- Restyled in place so :GetChecked()/:SetChecked() and the global name survive.
+    PeaversCommons.Theme.StyleCheckButton(checkbox)
 
     local textObj = checkbox.Text
     if not textObj and checkbox:GetName() then
@@ -39,9 +50,11 @@ function FrameUtils.CreateCheckbox(parent, name, text, x, y, initialValue, textC
     if textObj then
         textObj:SetText(text)
         textObj:SetFontObject("GameFontNormal")
-        if textColor then
-            textObj:SetTextColor(textColor[1], textColor[2], textColor[3])
-        end
+        -- The template anchors its label to the old 26px box; re-anchor so the
+        -- gap matches the smaller box.
+        textObj:ClearAllPoints()
+        textObj:SetPoint("LEFT", checkbox, "RIGHT", 8, 0)
+        textObj:SetTextColor(unpack(textColor or C.text))
     end
 
     if initialValue ~= nil then
@@ -185,7 +198,7 @@ function FrameUtils.CreateSeparator(parent, x, y, width)
     local separator = parent:CreateTexture(nil, "ARTWORK")
     separator:SetPoint("TOPLEFT", x, y)
     separator:SetSize(width or 450, 1)
-    separator:SetColorTexture(0.5, 0.5, 0.5, 0.5)
+    separator:SetColorTexture(C.border[1], C.border[2], C.border[3], 1)
 
     return separator, y - 15
 end
