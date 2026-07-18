@@ -31,6 +31,7 @@ src\Core\FrameCore.lua
 src\Core\FrameLock.lua
 src\Core\VisibilityManager.lua
 src\Core\AddonInit.lua
+src\UI\Theme.lua
 src\Core\FrameUtils.lua
 src\UI\Widgets.lua
 src\Core\ConfigUIUtils.lua

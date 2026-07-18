@@ -8,6 +8,13 @@ PeaversCommons.ConfigUIUtils = ConfigUIUtils
 local FrameUtils = PeaversCommons.FrameUtils
 local Utils = PeaversCommons.Utils
 
+-- Shared palette. This module predates PeaversCommons.Widgets and is still used
+-- by six addons (PeaversConsumables and PeaversBestInSlot build their whole
+-- settings page with it), so it has to theme from the same source or those
+-- addons keep the old gold-on-dark look while the rest of the fleet moves.
+local Theme = PeaversCommons.Theme
+local C = Theme.Colors
+
 -- Creates a slider with standardized formatting
 function ConfigUIUtils.CreateSlider(parent, name, label, min, max, step, defaultVal, width, callback)
     local container = CreateFrame("Frame", nil, parent)
@@ -115,14 +122,16 @@ end
 -- Creates a section header with standardized formatting
 function ConfigUIUtils.CreateSectionHeader(parent, text, indent, yPos, fontSize)
     local header, newY = FrameUtils.CreateSectionHeader(parent, text, indent, yPos)
-    header:SetFont(header:GetFont(), fontSize or 18)
+    -- Default to the eyebrow scale (10) rather than the old 18pt heading, so
+    -- pages built through this helper match the ones built with W:CreateSectionHeader.
+    header:SetFont(header:GetFont(), fontSize or 10)
     return header, newY
 end
 
 -- Creates a subsection label with standardized formatting
 function ConfigUIUtils.CreateSubsectionLabel(parent, text, indent, y)
     local label, newY = FrameUtils.CreateLabel(parent, text, indent, y, "GameFontNormalSmall")
-    label:SetTextColor(0.9, 0.9, 0.9)
+    label:SetTextColor(unpack(C.text))
     return label, newY
 end
 
@@ -206,7 +215,7 @@ function ConfigUIUtils.CreateNewBadge(parent, anchorFrame, xOffset, yOffset)
     local newBadge = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     newBadge:SetPoint("LEFT", anchorFrame, "RIGHT", xOffset or 10, yOffset or 0)
     newBadge:SetText("NEW!")
-    newBadge:SetTextColor(0, 1, 0)
+    newBadge:SetTextColor(unpack(C.accent))
     
     -- Create a colored glow around the NEW badge
     local newBadgeGlow = parent:CreateTexture(nil, "BACKGROUND")
@@ -272,15 +281,15 @@ function ConfigUIUtils.CreateGlobalAppearanceSection(parent, addonName, addon, x
     -- Section header
     local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", x, y)
-    header:SetText("Global Appearance")
-    header:SetTextColor(1, 0.84, 0)
+    header:SetText("GLOBAL APPEARANCE")
+    header:SetTextColor(unpack(C.eyebrow))
     y = y - 25
 
     -- Description
     local desc = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     desc:SetPoint("TOPLEFT", x, y)
     desc:SetText("Sync appearance settings across all Peavers addons")
-    desc:SetTextColor(0.7, 0.7, 0.7)
+    desc:SetTextColor(unpack(C.textSec))
     y = y - 25
 
     -- Checkbox to enable/disable global appearance
@@ -374,8 +383,9 @@ function ConfigUIUtils.CreateSettingsPanel(title, description)
     local titleText = content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     titleText:SetPoint("TOPLEFT", baseSpacing, yPos)
     titleText:SetText(title)
-    titleText:SetTextColor(1, 0.84, 0) -- Gold color for main title
-    titleText:SetFont(titleText:GetFont(), 24, "OUTLINE")
+    titleText:SetTextColor(unpack(C.text))
+    -- No OUTLINE: the stock WoW text outline fights the flat aesthetic.
+    titleText:SetFont(titleText:GetFont(), 22, "")
     yPos = yPos - (baseSpacing * goldenRatio)
     
     if description then
