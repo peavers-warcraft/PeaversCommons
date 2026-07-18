@@ -264,9 +264,9 @@ function W.CreateCheckbox(_, parent, labelText, opts)
     -- checkbox exactly so both code paths render the same control. Falls back to
     -- the flat backdrop if the art is unavailable.
     local boxFill = box:CreateTexture(nil, "BACKGROUND")
-    boxFill:SetAllPoints(box)
+    boxFill:SetAllPoints(box --[[@as Frame]])
     local boxBorder = box:CreateTexture(nil, "BORDER")
-    boxBorder:SetAllPoints(box)
+    boxBorder:SetAllPoints(box --[[@as Frame]])
     local boxRounded = true
 
     -- Filled indigo box with a flat white check. Blizzard's UI-CheckBox-Check
