@@ -9,7 +9,7 @@ local BUTTON_BAR_HEIGHT = 30
 local PADDING = 8
 
 local function CreateCopyPopup(parent)
-    local popup = CreateFrame("Frame", "PeaversDebugCopyPopup", UIParent, "BackdropTemplate")
+    local popup = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     popup:SetSize(500, 350)
     popup:SetPoint("CENTER")
     popup:SetFrameStrata("DIALOG")
@@ -176,7 +176,7 @@ local function CreateMessageArea(parent)
         end
     end)
 
-    local scrollBar = CreateFrame("Slider", "PeaversDebugDialogScrollBar", messageArea, "BackdropTemplate")
+    local scrollBar = CreateFrame("Slider", nil, messageArea, "BackdropTemplate")
     scrollBar:SetPoint("TOPRIGHT", -4, -16)
     scrollBar:SetPoint("BOTTOMRIGHT", -4, 16)
     scrollBar:SetWidth(16)
