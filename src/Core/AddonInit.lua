@@ -45,11 +45,16 @@ function AddonInit:SetupMetadata(addon, addonName)
     addon.name = addonName
 end
 
--- Create a standard toggle display function
+-- Create a standard toggle display function, exposed as addon.ToggleDisplay.
+--
+-- This used to also write the function into _G under a caller-supplied name (the old
+-- `functionName` argument, e.g. "ToggleStatsDisplay"). That minted a generic, unprefixed
+-- global per addon — the exact namespace pollution we lint for elsewhere — and because it
+-- went through _G[name], luacheck could never see it. No caller ever read those globals,
+-- so they are gone; use addon.ToggleDisplay(), or the addon's slash command.
 -- @param addon: The addon table (must have Core.frame)
--- @param functionName: Global function name (e.g., "ToggleStatsDisplay")
 -- @return function: The toggle function
-function AddonInit:CreateToggleFunction(addon, functionName)
+function AddonInit:CreateToggleFunction(addon)
     local toggleFunc = function()
         if addon.Core and addon.Core.frame then
             if addon.Core.frame:IsShown() then
@@ -60,11 +65,7 @@ function AddonInit:CreateToggleFunction(addon, functionName)
         end
     end
 
-    -- Make globally accessible
-    if functionName then
-        _G[functionName] = toggleFunc
-    end
-
+    addon.ToggleDisplay = toggleFunc
     return toggleFunc
 end
 
@@ -183,7 +184,6 @@ end
 -- @param options: Table with configuration options:
 --   - modules: Table of module names to initialize
 --   - slashCommand: Slash command string (e.g., "pds")
---   - toggleFunctionName: Global toggle function name
 --   - displayName: Settings panel display name
 --   - description: Settings panel description
 --   - slashCommandHelp: Table of slash command help strings
@@ -207,7 +207,7 @@ function AddonInit:Setup(addon, addonName, options)
     self:SetupMetadata(addon, addonName)
 
     -- Create toggle function
-    local toggleFunc = self:CreateToggleFunction(addon, options.toggleFunctionName)
+    local toggleFunc = self:CreateToggleFunction(addon)
 
     -- Register slash commands
     if options.slashCommand then
