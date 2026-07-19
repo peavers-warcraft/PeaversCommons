@@ -1,0 +1,4 @@
+{
+  "_comment": "Shared framework: owns the Peavers* frame namespace, not just PeaversCommons*.",
+  "framePrefixes": ["Peavers"]
+}
