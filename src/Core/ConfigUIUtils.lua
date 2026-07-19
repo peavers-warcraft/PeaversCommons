@@ -416,8 +416,91 @@ function ConfigUIUtils.CreateSettingsPanel(title, description)
     panel.OnRefresh = function() end
     panel.OnCommit = function() end
     panel.OnDefault = function() end
-    
+
     return panel
+end
+
+-- Builds a standard "Information" tab from declarative content, so every addon
+-- gets the same prose layout without carrying its own paragraph code.
+--
+-- blocks is an ordered array where each entry is one of:
+--   "plain text"                          a paragraph in the secondary color
+--   { text = "...", color = {...} }       a paragraph in a specific color
+--   { header = "TEXT" }                   a section header
+--   { command = "/x", desc = "..." }      a slash command with its description
+--
+-- Paragraphs get an explicit SetWidth rather than a TOPLEFT+TOPRIGHT anchor
+-- pair: with dual anchors the wrap width comes from the parent's layout, which
+-- is not resolved while the tab is being built, so GetStringHeight() reports
+-- fewer lines than eventually render and the next block lands on top of this
+-- one. An explicit width makes wrapping and measurement deterministic.
+function ConfigUIUtils.BuildInfoPage(parentFrame, title, blocks)
+    local W = PeaversCommons.Widgets
+
+    local indent = 25
+    local width = 360
+    local frameWidth = parentFrame:GetWidth()
+    if frameWidth and frameWidth > 100 then
+        width = frameWidth - (indent * 2) - 10
+    end
+
+    local y = -10
+
+    local function Paragraph(text, color)
+        local fs = parentFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        fs:SetPoint("TOPLEFT", indent, y)
+        fs:SetWidth(width)
+        fs:SetWordWrap(true)
+        fs:SetJustifyH("LEFT")
+        fs:SetJustifyV("TOP")
+        fs:SetSpacing(2)
+        fs:SetText(text)
+
+        color = color or C.textSec
+        fs:SetTextColor(color[1], color[2], color[3])
+
+        local height = fs:GetStringHeight() or 0
+        -- Floor at one line in case measurement is unavailable this frame, so
+        -- a bad read can never collapse the gap and overlap the next block.
+        if height < 14 then height = 14 end
+        fs:SetHeight(height)
+
+        y = y - (height + 16)
+    end
+
+    local titleLabel = W:CreateLabel(parentFrame, title, {
+        font = "GameFontNormalLarge",
+        color = C.gold,
+    })
+    titleLabel:SetPoint("TOPLEFT", indent, y)
+    y = y - 30
+
+    for _, block in ipairs(blocks) do
+        if type(block) == "string" then
+            Paragraph(block)
+        elseif block.header then
+            y = y - 12
+            local _, newY = W:CreateSectionHeader(parentFrame, block.header, indent, y)
+            y = newY - 10
+        elseif block.command then
+            local fs = parentFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+            fs:SetPoint("TOPLEFT", indent, y)
+            fs:SetWidth(width)
+            fs:SetWordWrap(true)
+            fs:SetJustifyH("LEFT")
+            fs:SetJustifyV("TOP")
+            fs:SetText(Theme.Colorize(C.accent, block.command) .. "  " .. block.desc)
+            fs:SetTextColor(C.textSec[1], C.textSec[2], C.textSec[3])
+            local height = fs:GetStringHeight() or 0
+            if height < 14 then height = 14 end
+            fs:SetHeight(height)
+            y = y - (height + 8)
+        elseif block.text then
+            Paragraph(block.text, block.color)
+        end
+    end
+
+    parentFrame:SetHeight(math.abs(y) + 30)
 end
 
 return ConfigUIUtils
