@@ -167,7 +167,7 @@ function SettingsObjects.FontSettings(parent, config, y, opts)
         else
             currentValue = config.fontOutline ~= false
         end
-        local toggle = W:CreateToggle(parent, "Font Outline", {
+        local toggle = W:CreateCheckbox(parent, "Font Outline", {
             checked = currentValue,
             width = width,
             onChange = function(checked)
@@ -185,7 +185,7 @@ function SettingsObjects.FontSettings(parent, config, y, opts)
     end
 
     if not exclude.fontShadow then
-        local toggle = W:CreateToggle(parent, "Font Shadow", {
+        local toggle = W:CreateCheckbox(parent, "Font Shadow", {
             checked = config.fontShadow or false,
             width = width,
             onChange = MakeOnChange(config, "fontShadow", opts),
@@ -219,7 +219,7 @@ function SettingsObjects.Visibility(parent, config, y, opts)
     end
 
     if not exclude.hideOutOfCombat then
-        local toggle = W:CreateToggle(parent, "Hide When Out of Combat", {
+        local toggle = W:CreateCheckbox(parent, "Hide When Out of Combat", {
             checked = config.hideOutOfCombat or false,
             width = width,
             onChange = MakeOnChange(config, "hideOutOfCombat", opts),
@@ -229,7 +229,7 @@ function SettingsObjects.Visibility(parent, config, y, opts)
     end
 
     if not exclude.showOnLogin then
-        local toggle = W:CreateToggle(parent, "Show on Login", {
+        local toggle = W:CreateCheckbox(parent, "Show on Login", {
             checked = config.showOnLogin ~= false,
             width = width,
             onChange = MakeOnChange(config, "showOnLogin", opts),
@@ -239,7 +239,7 @@ function SettingsObjects.Visibility(parent, config, y, opts)
     end
 
     if not exclude.showTitleBar then
-        local toggle = W:CreateToggle(parent, "Show Title Bar", {
+        local toggle = W:CreateCheckbox(parent, "Show Title Bar", {
             checked = config.showTitleBar ~= false,
             width = width,
             onChange = MakeOnChange(config, "showTitleBar", opts),
@@ -300,7 +300,7 @@ function SettingsObjects.FrameSettings(parent, config, y, opts)
     end
 
     if not exclude.lockPosition then
-        local toggle = W:CreateToggle(parent, "Lock Frame Position", {
+        local toggle = W:CreateCheckbox(parent, "Lock Frame Position", {
             checked = config.lockPosition or false,
             width = width,
             onChange = MakeOnChange(config, "lockPosition", opts),
