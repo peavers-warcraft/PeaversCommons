@@ -351,73 +351,13 @@ function W.CreateCheckbox(_, parent, labelText, opts)
     return frame
 end
 
+-- Deprecated: the switch-style toggle was retired in favour of the checkbox
+-- for visual consistency across the ecosystem. Kept as a delegate because
+-- already-released addon versions still call it; new code should use
+-- CreateCheckbox directly. The two contracts are identical (opts.checked /
+-- onChange / width / name, SetChecked / GetChecked on the returned frame).
 function W.CreateToggle(_, parent, labelText, opts)
-    opts = opts or {}
-
-    local frame = CreateFrame("Frame", opts.name, parent)
-    frame:SetSize(opts.width or 300, 22)
-
-    local btn = CreateFrame("Button", nil, frame)
-    btn:SetAllPoints()
-
-    local label = btn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    label:SetPoint("LEFT", 0, 0)
-    label:SetText(labelText)
-    label:SetTextColor(unpack(C.text))
-
-    local track = CreateFrame("Frame", nil, btn, "BackdropTemplate")
-    track:SetSize(34, 16)
-    track:SetPoint("RIGHT", 0, 0)
-    track:SetBackdrop(FLAT_BACKDROP)
-    track:SetBackdropColor(unpack(C.bgInput))
-    track:SetBackdropBorderColor(unpack(C.border))
-
-    local thumb = track:CreateTexture(nil, "OVERLAY")
-    thumb:SetSize(12, 12)
-    thumb:SetTexture("Interface\\Buttons\\WHITE8x8")
-
-    local toggled = opts.checked or false
-
-    local function UpdateState()
-        thumb:ClearAllPoints()
-        if toggled then
-            thumb:SetPoint("RIGHT", track, "RIGHT", -2, 0)
-            -- White thumb on a solid accent track. The old code drew an accent
-            -- thumb on an accent-tinted track, which was nearly invisible.
-            thumb:SetVertexColor(1, 1, 1)
-            track:SetBackdropColor(unpack(C.accent))
-            track:SetBackdropBorderColor(unpack(C.accent))
-        else
-            thumb:SetPoint("LEFT", track, "LEFT", 2, 0)
-            thumb:SetVertexColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-            -- Filled groove rather than a transparent track, so the off state
-            -- reads as a switch instead of a floating square.
-            track:SetBackdropColor(unpack(C.bgNested))
-            track:SetBackdropBorderColor(unpack(C.border))
-        end
-    end
-
-    btn:SetScript("OnClick", function()
-        toggled = not toggled
-        UpdateState()
-        if opts.onChange then opts.onChange(toggled) end
-    end)
-
-    btn:SetScript("OnEnter", function()
-        label:SetTextColor(unpack(C.text))
-        if not toggled then track:SetBackdropBorderColor(unpack(C.borderHover)) end
-    end)
-    btn:SetScript("OnLeave", function()
-        label:SetTextColor(unpack(C.text))
-        if not toggled then track:SetBackdropBorderColor(unpack(C.border)) end
-    end)
-
-    UpdateState()
-
-    frame.SetChecked = function(self, value) toggled = value; UpdateState() end
-    frame.GetChecked = function(self) return toggled end
-
-    return frame
+    return W:CreateCheckbox(parent, labelText, opts)
 end
 
 function W.CreateSlider(_, parent, labelText, opts)
