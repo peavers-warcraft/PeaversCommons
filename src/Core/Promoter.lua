@@ -4,7 +4,7 @@ PeaversCommons.Promoter = Promoter
 
 local COOLDOWN_SECONDS = 600
 local DELAY_SECONDS = 3
-local MESSAGE = "Check out how to improve at https://wowcompare.io"
+local MESSAGE = "Check out free and open combat logs at https://parses.gg"
 
 local lastPromoteTime = 0
 
