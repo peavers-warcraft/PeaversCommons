@@ -9,11 +9,10 @@ eventFrame:SetScript("OnEvent", function(self, event, isInitialLogin, isReloadin
             print(" ")
             print(
                 "|cff3abdf7Peavers|r|cfffbbf24Addons|r|cff808080:|r " ..
-                "|cff3abdf7peavers.io|r " ..
+                "|cff4ade80NEW|r " ..
+                "|cffc084fcparses.gg|r " ..
                 "|cff808080•|r " ..
-                "|cff4ade80wowcompare.io|r " ..
-                "|cff808080•|r " ..
-                "|cfffbbf24addonsentry.io|r"
+                "|cffe2e2e2the next generation of open combat logging|r"
             )
             print(" ")
         end)
