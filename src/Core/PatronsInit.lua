@@ -17,6 +17,7 @@ local function InitializePatrons()
 
     Patrons:AddPatrons({
         { name = "Brian Huddleston", tier = "gold" },
+        { name = "Jason Ryan", tier = "gold" },
         { name = "Michael Giallourakis", tier = "gold" },
         { name = "Arckwellise", tier = "silver" },
         { name = "Betty Hartigan", tier = "silver" },
