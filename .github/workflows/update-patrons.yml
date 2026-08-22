@@ -35,12 +35,15 @@ jobs:
       - name: Fetch Patreon secrets from Vault
         uses: hashicorp/vault-action@v3
         with:
-          url: https://vault.vault.svc.cluster.local:8200
+          # The tunnel hostname, not the cluster service, so this job is not tied
+          # to running inside the cluster. Cloudflare terminates a real
+          # certificate here, which is why verification is on - the cluster
+          # service serves a private CA and needed it skipped.
+          url: https://vault-ci.parses.gg
           method: jwt
           path: jwt-github
           role: ci
           jwtGithubAudience: https://vault.internal
-          tlsSkipVerify: true
           exportToken: false
           secrets: |
             oauth2/creds/patreon access_token | PATREON_ACCESS_TOKEN ;
