@@ -750,6 +750,22 @@ function W:CreateLabel(parent, text, opts)
     if opts.size then
         label:SetFont(label:GetFont(), opts.size, opts.outline or "")
     end
+    -- A FontString with no width sizes itself to its text and stays on one
+    -- line, so a paragraph passed here runs off the panel rather than wrapping.
+    -- `width` is what gives wrapping something to wrap against; without it
+    -- `wrap` has nothing to do. Justification is set explicitly because the
+    -- game font objects carry their own, and a body block anchored TOPLEFT
+    -- wants LEFT/TOP whatever that happens to be.
+    if opts.width then
+        label:SetWidth(opts.width)
+        label:SetJustifyH(opts.justifyH or "LEFT")
+        label:SetJustifyV(opts.justifyV or "TOP")
+    elseif opts.justifyH then
+        label:SetJustifyH(opts.justifyH)
+    end
+    if opts.wrap ~= nil then
+        label:SetWordWrap(opts.wrap and true or false)
+    end
     return label
 end
 
