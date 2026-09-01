@@ -83,6 +83,29 @@ near("mixed scales: left is the leftmost absolute edge", left, 0)
 near("mixed scales: width spans to the far frame's absolute right", width, 300)
 near("mixed scales: height is the taller frame in absolute units", height, 100)
 
+-- Children are not clipped to their parent in WoW, so the rect of a window is
+-- not the window. PeaversUnitFrames hangs its aura icons above the unit button,
+-- outside its rect, and the first finished screenshot had the whole buff row
+-- cropped off - which looked deliberate, the way a tight crop always does.
+local withAuras = {
+	harness.frame({ 100, 100, 200, 50 }, 1, nil, {
+		harness.frame({ 100, 160, 200, 30 }, 1), -- auras, above the button
+		harness.frame({ 100, 90, 200, 8 }, 1),   -- cast bar, below it
+	}),
+}
+left, bottom, width, height = Capture:UnionRect(withAuras)
+near("children above the frame extend the union upwards", bottom + height, 190)
+near("children below the frame extend it downwards", bottom, 90)
+near("the union is as wide as the widest of them", width, 200)
+
+-- A hidden child parked off-screen must not drag the crop across the screen.
+local hidden = harness.frame({ 4000, 4000, 50, 50 }, 1)
+function hidden:IsVisible() return false end
+left, bottom, width, height = Capture:UnionRect({
+	harness.frame({ 100, 100, 200, 50 }, 1, nil, { hidden }),
+})
+near("a hidden child is ignored", width, 200)
+
 check("no frames yields nil rather than a zero rect",
 	Capture:UnionRect({}) == nil)
 

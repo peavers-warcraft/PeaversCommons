@@ -344,11 +344,49 @@ end
 -- it against numbers rather than against a running client.
 -- ---------------------------------------------------------------------------
 
+--- How far down the frame tree the union looks. Four covers a button holding an
+--- aura container holding icons holding their own overlays.
+local DESCEND = 4
+
+---A frame and every visible descendant, to a bounded depth.
+---
+---WoW does not clip children to their parent, so a frame's rect is not the same
+---thing as what anybody looking at it would call the window. PeaversUnitFrames
+---anchors its aura icons *above* the unit button, outside its rect entirely, and
+---cropping to the button alone cut the whole buff row off the first finished
+---screenshot - which looked deliberate, because a tight crop always does.
+---
+---Depth-limited rather than exhaustive: this walks live UI on every shot, and an
+---unbounded walk of a config window with a scroll child full of rows is a lot of
+---work for a rect that stopped changing three levels up.
+---@param frame table
+---@param depth integer
+---@param out table[]?
+---@return table[]
+local function Descendants(frame, depth, out)
+    out = out or {}
+    table.insert(out, frame)
+
+    if depth <= 0 or type(frame.GetChildren) ~= "function" then return out end
+
+    for _, child in ipairs({ frame:GetChildren() }) do
+        -- Hidden children are skipped: an addon that keeps an off-screen frame
+        -- parked for later would otherwise drag the crop across the screen.
+        if child.IsVisible and child:IsVisible() then
+            Descendants(child, depth - 1, out)
+        end
+    end
+
+    return out
+end
+
 ---The union of several frames' rects, in the absolute (scale 1) UI space.
 ---
 ---`GetRect` answers in the frame's own scaled space, so each is multiplied by
 ---its own effective scale before they can be compared - two frames at different
 ---scales otherwise union into a box that contains neither.
+---
+---Covers each frame's visible descendants too; see Descendants above.
 ---@param frames table[]
 ---@return number? left
 ---@return number? bottom
@@ -357,7 +395,10 @@ end
 function Capture:UnionRect(frames)
     local minL, minB, maxR, maxT
 
-    for _, frame in ipairs(frames) do
+    local all = {}
+    for _, frame in ipairs(frames) do Descendants(frame, DESCEND, all) end
+
+    for _, frame in ipairs(all) do
         if frame.GetRect and frame.GetEffectiveScale then
             local left, bottom, width, height = frame:GetRect()
             if left and bottom and width and height then
