@@ -40,12 +40,23 @@ harness.root = root
 ---@param rect table {left, bottom, width, height}
 ---@param scale number? effective scale, default 1
 ---@param own number? the frame's own SetScale value, default = scale
-function harness.frame(rect, scale, own)
+---@param children table[]? visible child frames, as the client would report them
+function harness.frame(rect, scale, own, children)
 	local frame = {}
 	local effective = scale or 1
 
 	function frame:GetRect()
 		return rect[1], rect[2], rect[3], rect[4]
+	end
+
+	function frame:IsVisible()
+		return true
+	end
+
+	if children then
+		function frame:GetChildren()
+			return table.unpack(children)
+		end
 	end
 
 	function frame:GetEffectiveScale()
