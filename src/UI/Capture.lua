@@ -458,6 +458,16 @@ local function EnsureStage()
         marks[i] = mark
     end
 
+    -- Escape closes it, like any other window. This is the escape hatch that
+    -- matters: the stage is opaque and full-screen, so a run that stalls with it
+    -- up leaves the player looking at a blank screen. Escape must always work,
+    -- and it must put the reparented windows back rather than just hiding the
+    -- thing covering them.
+    table.insert(UISpecialFrames, "PeaversCaptureStage")
+    stage:SetScript("OnHide", function()
+        Capture:Abort("stage dismissed - windows put back.")
+    end)
+
     return stage
 end
 
@@ -570,8 +580,25 @@ end
 local running = false
 local previousFormat, previousQuality
 
+--- Bumped every time a run starts or ends. Deferred work carries the value it
+--- began with and does nothing if it no longer matches, so a timer left over
+--- from an aborted run cannot reparent a window that has already been put back.
+local runId = 0
+
+--- The states of the frames currently sitting on the stage.
+---
+--- Module-level rather than local to Shoot because an abort has to be able to
+--- put them back from anywhere - the watchdog, a slash command, or the stage
+--- being dismissed with Escape.
+local staged = {}
+
 local function Say(...)
     print("|cff3abdf7Peavers|rCapture:", ...)
+end
+
+local function RestoreStaged()
+    for i = #staged, 1, -1 do pcall(RestoreState, staged[i]) end
+    staged = {}
 end
 
 ---Put the client into lossless screenshots, remembering what it was on.
@@ -583,12 +610,34 @@ local function BeginRun()
 end
 
 local function EndRun()
+    -- Cleared before anything else, because hiding the stage fires its OnHide,
+    -- which calls Abort, which calls this. The flags are what stops that being
+    -- infinite.
+    running = false
+    runId = runId + 1
+
     if previousFormat then SetCVar("screenshotFormat", previousFormat) end
     if previousQuality then SetCVar("screenshotQuality", previousQuality) end
     previousFormat, previousQuality = nil, nil
 
+    RestoreStaged()
     if stage then stage:Hide() end
-    running = false
+end
+
+---Stop a run and put everything back.
+---
+---The escape hatch, and the reason it exists: the stage is a full-screen opaque
+---frame. If a run stalls with it up - an error in a deferred callback, a window
+---that misbehaves when reparented - the player is looking at a blank screen with
+---no obvious way out, which is a far worse failure than a bad screenshot.
+---
+---Reachable three ways: Escape (the stage is in UISpecialFrames), `/pshot stop`,
+---and a watchdog that fires if a shot does not report back in time.
+---@param reason string?
+function Capture:Abort(reason)
+    if not running and #staged == 0 then return end
+    EndRun()
+    Say(reason or "stopped.")
 end
 
 ---Stage one target for one pass and fire the shutter.
@@ -599,11 +648,15 @@ local function Shoot(target, pass, onDone)
     local frames = Capture:FramesFor(target)
     if #frames == 0 then return onDone(false, "no frame") end
 
-    local states = {}
-    for i, frame in ipairs(frames) do states[i] = SaveState(frame) end
+    -- The run this shot belongs to. Every deferred step below checks it, so a
+    -- timer that outlives an abort finds a stale token and stops rather than
+    -- restaging a window that has already been put back.
+    local myRun = runId
+
+    for _, frame in ipairs(frames) do table.insert(staged, SaveState(frame)) end
 
     local function restoreAll()
-        for i = #states, 1, -1 do pcall(RestoreState, states[i]) end
+        RestoreStaged()
     end
 
     local ok, err = pcall(function()
@@ -625,6 +678,14 @@ local function Shoot(target, pass, onDone)
     -- the rects are worth reading. Reading them in the same tick returns where
     -- the windows were before, not where they now are.
     C_Timer.After(0.05, function()
+        if myRun ~= runId then return end
+
+        -- Everything from here runs outside the caller's stack, so an error is
+        -- not caught by anything above and would leave the stage up, the queue
+        -- waiting on an onDone that never comes, and the player staring at a
+        -- blank screen. That is the worst outcome this file can produce, so it
+        -- is the one place a blanket pcall is worth it.
+        local staged_ok, staged_err = pcall(function()
         local uLeft, uBottom, uWidth, uHeight = Capture:UnionRect(frames)
         if not uLeft or uWidth <= 0 or uHeight <= 0 then
             restoreAll()
@@ -682,25 +743,36 @@ local function Shoot(target, pass, onDone)
         pixels.magnify = magnify
 
         C_Timer.After(SETTLE, function()
-            local file = Capture:PredictFilename("tga")
-            Screenshot()
+            if myRun ~= runId then return end
 
-            table.insert(Manifest(), {
-                addon = target.addon,
-                id = target.id or "main",
-                label = target.label,
-                pass = pass.name,
-                file = file,
-                mark = { size = MARK_SIZE, color = MARK_COLOR },
-                scale = pixels.magnify,
-                rect = pixels,
-                taken = time(),
-            })
+            local shot_ok, shot_err = pcall(function()
+                local file = Capture:PredictFilename("tga")
+                Screenshot()
+
+                table.insert(Manifest(), {
+                    addon = target.addon,
+                    id = target.id or "main",
+                    label = target.label,
+                    pass = pass.name,
+                    file = file,
+                    mark = { size = MARK_SIZE, color = MARK_COLOR },
+                    scale = pixels.magnify,
+                    rect = pixels,
+                    taken = time(),
+                })
+            end)
 
             restoreAll()
             if target.restore then pcall(target.restore) end
-            onDone(true)
+            onDone(shot_ok, shot_ok and nil or tostring(shot_err))
         end)
+        end)
+
+        if not staged_ok then
+            restoreAll()
+            if stage then stage:Hide() end
+            onDone(false, tostring(staged_err))
+        end
     end)
 end
 
@@ -727,6 +799,10 @@ local function RunQueue(targets, passes)
     local index, taken, failed = 0, 0, {}
 
     local function step()
+        -- An abort between shots clears this, and the queued timer for the next
+        -- step is already in flight by then.
+        if not running then return end
+
         index = index + 1
         local job = queue[index]
 
@@ -742,7 +818,19 @@ local function RunQueue(targets, passes)
             return
         end
 
+        -- The watchdog. A shot that never reports back would otherwise leave the
+        -- queue waiting forever with the stage up; four intervals is about
+        -- twenty times how long a shot actually takes.
+        local myRun, settled = runId, false
+        C_Timer.After(INTERVAL * 4, function()
+            if settled or myRun ~= runId then return end
+            Capture:Abort("a shot stalled - stopped and put everything back.")
+        end)
+
         Shoot(job.target, job.pass, function(ok, why)
+            settled = true
+            if myRun ~= runId then return end
+
             if ok then
                 taken = taken + 1
             else
@@ -838,10 +926,14 @@ function Capture:SetupSlash()
             print("  |cffffff00/pshot list|r          - what can be captured right now")
             print("  |cffffff00/pshot all|r           - capture every loaded window")
             print("  |cffffff00/pshot <addon>|r       - capture one, e.g. /pshot PeaversDynamicStats")
+            print("  |cffffff00/pshot stop|r          - abort a run and put everything back")
             print("  |cffffff00/pshot clear|r         - forget the manifest")
-            print("Shots go to your Screenshots folder; /reload writes the manifest.")
+            print("Escape also stops a run. Shots go to your Screenshots folder;")
+            print("|cfffbbf24/reload|r is what writes the manifest.")
         elseif command == "list" then
             self:List()
+        elseif command == "stop" then
+            self:Abort()
         elseif command == "clear" then
             self:Clear()
         elseif command == "all" then
