@@ -64,6 +64,7 @@ src\UI\BarTextManager.lua
 src\UI\StatBar.lua
 src\UI\BarManager.lua
 src\UI\TitleBar.lua
+src\UI\Capture.lua
 
 src\Templates\patrons_template.lua
 src\Templates\settings_template.lua
