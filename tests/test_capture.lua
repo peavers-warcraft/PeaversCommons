@@ -119,8 +119,11 @@ near("full-screen rect is the full image width", corner.w, 2560, 1e-6)
 -- FitScale - magnify, but never past the edge of the stage
 --------------------------------------------------------------------------------
 
+-- Against the exposed ceiling rather than a repeated literal: the first version
+-- of this hardcoded 2, and silently became a false assertion the moment the
+-- ceiling was raised.
 near("a small window takes the full magnification",
-	Capture:FitScale(100, 100, 1000, 1000), 2)
+	Capture:FitScale(100, 100, 1000, 1000), Capture.MAX_SCALE)
 
 -- 1000 * 0.86 / 500 = 1.72, below the requested 2.
 near("a large window is held back so its marks stay on screen",
