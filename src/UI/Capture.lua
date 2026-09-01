@@ -131,6 +131,11 @@ local INTERVAL = 1.2
 --- at any magnification but Shadow64 and the rounded fills do not.
 local SCALE = 4
 
+--- Exposed so the tests can assert against the ceiling rather than restating
+--- the number, and so a caller can report what it asked for beside what the
+--- screen allowed.
+Capture.MAX_SCALE = SCALE
+
 --- Stage colours for the two passes, and the order they are taken in.
 local PASSES = {
     { name = "black", color = { 0, 0, 0 } },
