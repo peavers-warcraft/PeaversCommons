@@ -440,7 +440,13 @@ local function EnsureStage()
     if stage then return stage end
 
     stage = CreateFrame("Frame", "PeaversCaptureStage", UIParent)
-    stage:SetAllPoints(UIParent)
+
+    -- Anchored to WorldFrame, not UIParent. UIParent is inset from the physical
+    -- screen wherever the client reserves space - on a notched Mac display it
+    -- starts below the notch - so SetAllPoints(UIParent) left a strip of live
+    -- game UI along the top of every capture. WorldFrame is the whole screen.
+    stage:SetPoint("TOPLEFT", WorldFrame, "TOPLEFT")
+    stage:SetPoint("BOTTOMRIGHT", WorldFrame, "BOTTOMRIGHT")
     stage:SetFrameStrata("FULLSCREEN_DIALOG")
     stage:SetFrameLevel(1)
     stage:EnableMouse(true) -- swallow clicks so nothing underneath reacts
@@ -607,6 +613,11 @@ local function BeginRun()
     previousQuality = GetCVar("screenshotQuality")
     SetCVar("screenshotFormat", "tga")
     SetCVar("screenshotQuality", "10")
+
+    -- TOOLTIP strata draws above FULLSCREEN_DIALOG, so the stage does not cover
+    -- it: whatever the pointer happened to be over ends up in the middle of the
+    -- shot. The first real capture caught a unit tooltip this way.
+    if GameTooltip then GameTooltip:Hide() end
 end
 
 local function EndRun()
@@ -746,6 +757,11 @@ local function Shoot(target, pass, onDone)
             if myRun ~= runId then return end
 
             local shot_ok, shot_err = pcall(function()
+                -- Again, immediately before the shutter: the pointer is still
+                -- live during a run and the tooltip comes back on its own the
+                -- moment it moves over anything.
+                if GameTooltip then GameTooltip:Hide() end
+
                 local file = Capture:PredictFilename("tga")
                 Screenshot()
 
@@ -862,21 +878,40 @@ function Capture:Run(filter)
         return
     end
 
-    local wanted = {}
+    local wanted, unopened = {}, {}
     for _, target in ipairs(self:Targets()) do
         local matches = not filter
             or string.lower(target.addon) == string.lower(filter)
             or string.lower(target.id or "") == string.lower(filter)
 
         if matches and #self:FramesFor(target) > 0 then
-            table.insert(wanted, target)
+            -- Only what is actually on screen. A window created at load but
+            -- never opened has a real size and no contents, and capturing it
+            -- produces a correctly-cropped picture of nothing - which looks
+            -- like the tool being broken rather than like the window being
+            -- shut. Skipping it and saying so is the honest answer.
+            if self:VisibleCount(target) > 0 then
+                table.insert(wanted, target)
+            else
+                table.insert(unopened, target.addon .. ":" .. (target.id or "main"))
+            end
         end
     end
 
     if #wanted == 0 then
-        Say(filter and ("nothing matching '" .. filter .. "' is loaded and showing.")
-            or "no capture targets resolved - are the addons loaded?")
+        if #unopened > 0 then
+            Say("nothing to capture - these are loaded but not open, so open them first:")
+            for _, name in ipairs(unopened) do print("  " .. name) end
+        else
+            Say(filter and ("nothing matching '" .. filter .. "' is loaded.")
+                or "no capture targets resolved - are the addons loaded?")
+        end
         return
+    end
+
+    if #unopened > 0 then
+        Say(("skipping %d window(s) that are loaded but not open: %s")
+            :format(#unopened, table.concat(unopened, ", ")))
     end
 
     running = true
@@ -884,17 +919,45 @@ function Capture:Run(filter)
     RunQueue(wanted, PASSES)
 end
 
+---How many of a target's frames are on screen right now.
+---
+---The distinction that matters. A frame object existing says nothing about
+---whether it would photograph: several of these windows are created empty at
+---load and only build their contents when they are first opened, so showing one
+---that has never been opened yields a correctly-cropped rectangle of nothing.
+---That is exactly what the first real capture produced - 99% pure black in one
+---pass and pure white in the other, which is the pipeline faithfully reporting
+---that there was nothing there.
+---@param target table
+---@return integer
+function Capture:VisibleCount(target)
+    local shown = 0
+    for _, frame in ipairs(self:FramesFor(target)) do
+        if frame.IsVisible and frame:IsVisible() then shown = shown + 1 end
+    end
+    return shown
+end
+
 ---What would be captured, and what would not.
 function Capture:List()
     Say("capture targets:")
     for _, target in ipairs(self:Targets()) do
         local frames = self:FramesFor(target)
-        local state = #frames > 0
-            and ("|cff4ade80ready|r (" .. #frames .. " frame(s))")
-            or "|cff949494not loaded|r"
+        local visible = self:VisibleCount(target)
+
+        local state
+        if #frames == 0 then
+            state = "|cff949494not loaded|r"
+        elseif visible == 0 then
+            state = "|cfffbbf24loaded but not open|r - open it first"
+        else
+            state = ("|cff4ade80showing|r (%d frame(s))"):format(visible)
+        end
+
         print(("  %-22s %-12s %s"):format(target.addon, target.id or "main", state))
     end
     Say("shots recorded this session: " .. #Manifest())
+    Say("Open a window before capturing it - a window that has never been opened photographs as nothing.")
 end
 
 ---Forget the manifest. The image files are left alone.
