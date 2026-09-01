@@ -602,6 +602,73 @@ local function Say(...)
     print("|cff3abdf7Peavers|rCapture:", ...)
 end
 
+-- ---------------------------------------------------------------------------
+-- The shutter
+--
+-- `Screenshot()` returns immediately and the client reads the pixels later, so
+-- anything done in the same tick is photographed instead of what was staged.
+--
+-- This cost two rounds of "the pictures are black". The stage and the marks
+-- came out correctly, and the window did not, because restoring it in the tick
+-- after the call put it back under UIParent - which is *behind* the opaque
+-- stage - before the capture actually happened. The one thing that survived was
+-- a tooltip, and a tooltip is the one thing that was never reparented.
+--
+-- SCREENSHOT_SUCCEEDED is the client saying it has finished. Nothing is put
+-- back until it arrives.
+-- ---------------------------------------------------------------------------
+
+local shutter, pendingShot
+local warnedNoEvent = false
+
+--- Longest wait for the client to confirm a screenshot before giving up on the
+--- event and carrying on anyway. Generous: writing a 3024x1964 TGA to disk is
+--- not instant, and a run that stalls here has already failed.
+local SHUTTER_TIMEOUT = 3
+
+local function EnsureShutter()
+    if shutter then return end
+
+    shutter = CreateFrame("Frame")
+    shutter:RegisterEvent("SCREENSHOT_SUCCEEDED")
+    shutter:RegisterEvent("SCREENSHOT_FAILED")
+    shutter:SetScript("OnEvent", function(_, event)
+        local callback = pendingShot
+        pendingShot = nil
+        if callback then callback(event == "SCREENSHOT_SUCCEEDED", event) end
+    end)
+end
+
+---Fire the shutter, and call back once the client says it is done.
+---@param onCaptured fun(ok: boolean, why: string?)
+local function TakeShot(onCaptured)
+    EnsureShutter()
+
+    local settled = false
+    local function finish(ok, why)
+        if settled then return end
+        settled = true
+        onCaptured(ok, why)
+    end
+
+    pendingShot = finish
+    Screenshot()
+
+    -- If the event never comes the run must not stall. Carrying on is the right
+    -- default rather than failing: the file has almost certainly been written,
+    -- and treating a missing event as a failure would break the whole tool on
+    -- any client that does not fire it.
+    C_Timer.After(SHUTTER_TIMEOUT, function()
+        if pendingShot == finish then pendingShot = nil end
+        if not settled and not warnedNoEvent then
+            warnedNoEvent = true
+            Say("the client did not confirm a screenshot within " .. SHUTTER_TIMEOUT ..
+                "s - carrying on, but check the images.")
+        end
+        finish(true, "no confirmation")
+    end)
+end
+
 local function RestoreStaged()
     for i = #staged, 1, -1 do pcall(RestoreState, staged[i]) end
     staged = {}
@@ -756,31 +823,53 @@ local function Shoot(target, pass, onDone)
         C_Timer.After(SETTLE, function()
             if myRun ~= runId then return end
 
-            local shot_ok, shot_err = pcall(function()
-                -- Again, immediately before the shutter: the pointer is still
-                -- live during a run and the tooltip comes back on its own the
-                -- moment it moves over anything.
-                if GameTooltip then GameTooltip:Hide() end
+            -- Again, immediately before the shutter: the pointer is still live
+            -- during a run and the tooltip comes back on its own the moment it
+            -- moves over anything.
+            if GameTooltip then GameTooltip:Hide() end
 
-                local file = Capture:PredictFilename("tga")
-                Screenshot()
+            -- What the frames actually look like at the moment of the shot. If
+            -- an image comes back empty again this says whether the window was
+            -- shown, sized and where it was meant to be - which is the question
+            -- two rounds of guessing failed to answer.
+            local probe = {}
+            for i, frame in ipairs(frames) do
+                local left, bottom, width, height = frame:GetRect()
+                probe[i] = {
+                    shown = frame:IsShown() and true or false,
+                    visible = frame:IsVisible() and true or false,
+                    alpha = frame:GetAlpha(),
+                    strata = frame:GetFrameStrata(),
+                    level = frame:GetFrameLevel(),
+                    scale = frame:GetEffectiveScale(),
+                    left = left, bottom = bottom, width = width, height = height,
+                }
+            end
 
-                table.insert(Manifest(), {
-                    addon = target.addon,
-                    id = target.id or "main",
-                    label = target.label,
-                    pass = pass.name,
-                    file = file,
-                    mark = { size = MARK_SIZE, color = MARK_COLOR },
-                    scale = pixels.magnify,
-                    rect = pixels,
-                    taken = time(),
-                })
+            local file = Capture:PredictFilename("tga")
+
+            TakeShot(function(captured, why)
+                if myRun == runId then
+                    table.insert(Manifest(), {
+                        addon = target.addon,
+                        id = target.id or "main",
+                        label = target.label,
+                        pass = pass.name,
+                        file = file,
+                        mark = { size = MARK_SIZE, color = MARK_COLOR },
+                        scale = pixels.magnify,
+                        rect = pixels,
+                        probe = probe,
+                        taken = time(),
+                    })
+                end
+
+                -- Only now. Putting the window back before the client has read
+                -- the pixels photographs the restored UI, not the staged one.
+                restoreAll()
+                if target.restore then pcall(target.restore) end
+                onDone(captured, why)
             end)
-
-            restoreAll()
-            if target.restore then pcall(target.restore) end
-            onDone(shot_ok, shot_ok and nil or tostring(shot_err))
         end)
         end)
 
@@ -835,10 +924,11 @@ local function RunQueue(targets, passes)
         end
 
         -- The watchdog. A shot that never reports back would otherwise leave the
-        -- queue waiting forever with the stage up; four intervals is about
-        -- twenty times how long a shot actually takes.
+        -- queue waiting forever with the stage up. It has to outlast the
+        -- shutter's own timeout, or it fires first and aborts every run on a
+        -- client that is merely slow to write a file.
         local myRun, settled = runId, false
-        C_Timer.After(INTERVAL * 4, function()
+        C_Timer.After(SHUTTER_TIMEOUT + 5, function()
             if settled or myRun ~= runId then return end
             Capture:Abort("a shot stalled - stopped and put everything back.")
         end)
@@ -855,7 +945,11 @@ local function RunQueue(targets, passes)
                     why = why or "unknown",
                 })
             end
-            C_Timer.After(INTERVAL - SETTLE, step)
+            -- A full interval after the shot *completed*, not after it started:
+            -- the settle and the wait for the client's confirmation are both
+            -- inside the shot now, and the only thing this gap is protecting is
+            -- the one-file-per-second naming.
+            C_Timer.After(INTERVAL, step)
         end)
     end
 
