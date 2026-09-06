@@ -258,6 +258,27 @@ Theme.Fonts = {
     monoRegular  = FONT_PATH .. "IBMPlexMono-Regular.ttf",
     monoMedium   = FONT_PATH .. "IBMPlexMono-Medium.ttf",
     monoSemiBold = FONT_PATH .. "IBMPlexMono-SemiBold.ttf",
+
+    -- The collection's default face for anything an addon draws over the world:
+    -- bar text, unit frame names, stat readouts. Condensed and tall, which is
+    -- what makes it legible at 10-12pt over a moving background where a wider
+    -- face has to drop a size to fit.
+    --
+    -- ONE CONSTANT ON PURPOSE. Every addon reaches its default font through
+    -- ConfigManager.GetDefaultFont(), which reads this. Repointing this line at
+    -- another file moves the whole collection, which is what makes the open
+    -- licence question next to the file a one-line problem rather than a
+    -- fourteen-addon one. See src/Media/Fonts/ATTRIBUTION-AccidentalPresidency.txt.
+    display      = FONT_PATH .. "AccidentalPresidency.ttf",
+}
+
+-- The bundled faces, for anything that needs to know whether a path is ours -
+-- chiefly the locale check, since none of them cover CJK.
+Theme.BundledFonts = {
+    [Theme.Fonts.monoRegular]  = "Peavers Mono",
+    [Theme.Fonts.monoMedium]   = "Peavers Mono Medium",
+    [Theme.Fonts.monoSemiBold] = "Peavers Mono SemiBold",
+    [Theme.Fonts.display]      = "Peavers Display",
 }
 
 -- Neither font covers CJK, and Cyrillic coverage is inconsistent, so non-Latin

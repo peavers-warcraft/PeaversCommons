@@ -94,6 +94,8 @@ DefaultConfig.Presets = {
         barAlpha = 1.0,
         barBgAlpha = 0.7,
         textAlpha = 1.0,
+        -- Resolved at Initialize() through GetDefaultFont(); this literal is
+        -- only what a caller reading the table directly sees before that runs.
         fontFace = "Fonts\\FRIZQT__.TTF",
         fontSize = 8,
         fontOutline = "OUTLINE",
@@ -154,38 +156,35 @@ DefaultConfig.Presets = {
     },
 }
 
+--------------------------------------------------------------------------------
+-- Fonts
+--
+-- These three used to be a second, independent copy of the font logic in
+-- ConfigManager - same locale switch, same incompatibility list, written out
+-- twice. That was survivable while both answered "Blizzard's font", and stopped
+-- being survivable the moment the collection got a bundled default: an addon
+-- built on DefaultConfig would have kept FRIZQT while one built on ConfigManager
+-- moved, and the two would have disagreed on screen with no obvious reason.
+--
+-- ConfigManager loads first (see the TOC), so these delegate. The fallbacks are
+-- here only for the case where it somehow is not loaded, which should be never.
+--------------------------------------------------------------------------------
+
 -- Get the appropriate default font based on client locale
 function DefaultConfig.GetDefaultFont()
-    local locale = GetLocale()
-
-    if locale == "zhCN" then
-        return "Fonts\\ARKai_T.ttf"
-    elseif locale == "zhTW" then
-        return "Fonts\\bLEI00D.ttf"
-    elseif locale == "koKR" then
-        return "Fonts\\2002.TTF"
-    else
-        return "Fonts\\FRIZQT__.TTF"
+    local ConfigManager = PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.GetDefaultFont then
+        return ConfigManager.GetDefaultFont()
     end
+    return "Fonts\\FRIZQT__.TTF"
 end
 
 -- Check if a font is compatible with the current locale
 function DefaultConfig.IsFontCompatibleWithLocale(fontPath)
-    local locale = GetLocale()
-
-    if locale == "zhCN" or locale == "zhTW" or locale == "koKR" then
-        local incompatibleFonts = {
-            ["Fonts\\FRIZQT__.TTF"] = true,
-            ["Fonts\\ARIALN.TTF"] = true,
-            ["Fonts\\MORPHEUS.TTF"] = true,
-            ["Fonts\\SKURRI.TTF"] = true,
-        }
-
-        if incompatibleFonts[fontPath] then
-            return false
-        end
+    local ConfigManager = PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.IsFontCompatibleWithLocale then
+        return ConfigManager.IsFontCompatibleWithLocale(fontPath)
     end
-
     return true
 end
 
@@ -295,10 +294,19 @@ function DefaultConfig.ApplyDefaults(config, defaults)
 end
 
 -- Returns a sorted table of available fonts, including those from LibSharedMedia
+--
+-- Delegates for the same reason GetDefaultFont does: two font pickers offering
+-- different lists is the kind of inconsistency nobody reports as a bug and
+-- everybody notices.
 function DefaultConfig.GetFonts()
+    local ConfigManager = PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.GetFonts then
+        return ConfigManager.GetFonts()
+    end
+
     local fonts = {
         ["Fonts\\ARIALN.TTF"] = "Arial Narrow",
-        ["Fonts\\FRIZQT__.TTF"] = "Default",
+        ["Fonts\\FRIZQT__.TTF"] = "Blizzard",
         ["Fonts\\MORPHEUS.TTF"] = "Morpheus",
         ["Fonts\\SKURRI.TTF"] = "Skurri",
         ["Fonts\\ARKai_T.ttf"] = "ARKai (Simplified Chinese)",

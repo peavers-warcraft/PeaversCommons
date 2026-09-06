@@ -9,18 +9,71 @@ local Utils = PeaversCommons.Utils
 -- These functions provide common functionality used across all Peavers addons
 --------------------------------------------------------------------------------
 
--- Get the appropriate default font based on client locale
+--------------------------------------------------------------------------------
+-- Fonts
+--
+-- The collection has one default face, bundled in this addon, and every other
+-- Peavers addon inherits it by calling GetDefaultFont(). Before this there was
+-- no shared default at all: fourteen addons each fell back to Blizzard's
+-- FRIZQT__, which is why bar text in one never quite matched bar text in
+-- another.
+--
+-- The face itself is named once, in Theme.Fonts.display. Nothing here hardcodes
+-- a filename, so changing the collection's font is a one-line edit there.
+--
+-- Two things are deliberately NOT changed by this:
+--
+--   * Anybody who already has a font saved keeps it. GetDefaultFont is a
+--     default, and Config:Initialize only reaches for it when the setting is
+--     absent. Overwriting a saved fontFace on upgrade would be a UI pack
+--     rearranging somebody's screen without being asked.
+--   * The settings windows. Those draw with Blizzard's font objects, and are a
+--     dense grid of small text where a condensed display face is harder to read,
+--     not easier. The bundled face is for what addons draw over the world.
+--------------------------------------------------------------------------------
+
+-- Locales the bundled Latin faces can actually render. A CJK client given one
+-- of them draws blank glyphs, which looks like the addon is broken.
+local LATIN_LOCALES = {
+    enUS = true, enGB = true, deDE = true, frFR = true,
+    esES = true, esMX = true, itIT = true, ptBR = true, ruRU = false,
+}
+
+-- Blizzard's own per-locale fallbacks, used wherever the bundled face cannot be.
+local LOCALE_FALLBACK = {
+    zhCN = "Fonts\\ARKai_T.ttf",
+    zhTW = "Fonts\\bLEI00D.ttf",
+    koKR = "Fonts\\2002.TTF",
+    -- Cyrillic. The bundled face has no Cyrillic coverage, and Blizzard ships a
+    -- FRIZQT variant that does. Only Utils knew about this one before the three
+    -- copies of this switch were folded together.
+    ruRU = "Fonts\\FRIZQT___CYR.TTF",
+}
+
+-- The collection's default face for this client.
+--
+-- Falls back to Blizzard's font rather than returning a path the client cannot
+-- load: SetFont against a missing file fails silently and leaves a FontString
+-- blank, so a wrong answer here is invisible until somebody reports that their
+-- bars have no text.
 function ConfigManager.GetDefaultFont()
     local locale = GetLocale()
-    if locale == "zhCN" then
-        return "Fonts\\ARKai_T.ttf"
-    elseif locale == "zhTW" then
-        return "Fonts\\bLEI00D.ttf"
-    elseif locale == "koKR" then
-        return "Fonts\\2002.TTF"
-    else
-        return "Fonts\\FRIZQT__.TTF"
+
+    local fallback = LOCALE_FALLBACK[locale] or "Fonts\\FRIZQT__.TTF"
+    if not LATIN_LOCALES[locale] then
+        return fallback
     end
+
+    local Theme = PeaversCommons.Theme
+    local display = Theme and Theme.Fonts and Theme.Fonts.display
+    return display or fallback
+end
+
+-- The bundled face, whatever the locale - for callers that want to name it
+-- explicitly rather than take the locale-aware default.
+function ConfigManager.GetBundledFont()
+    local Theme = PeaversCommons.Theme
+    return Theme and Theme.Fonts and Theme.Fonts.display
 end
 
 -- Check if a font is compatible with the current client locale
@@ -37,6 +90,13 @@ function ConfigManager.IsFontCompatibleWithLocale(fontPath)
         if incompatibleFonts[fontPath] then
             return false
         end
+
+        -- Everything this addon bundles is Latin-only, so on a CJK client the
+        -- answer is the same for all of them and does not need listing twice.
+        local Theme = PeaversCommons.Theme
+        if Theme and Theme.BundledFonts and Theme.BundledFonts[fontPath] then
+            return false
+        end
     end
     return true
 end
@@ -45,13 +105,25 @@ end
 function ConfigManager.GetFonts()
     local fonts = {
         ["Fonts\\ARIALN.TTF"] = "Arial Narrow",
-        ["Fonts\\FRIZQT__.TTF"] = "Default",
+        ["Fonts\\FRIZQT__.TTF"] = "Blizzard",
         ["Fonts\\MORPHEUS.TTF"] = "Morpheus",
         ["Fonts\\SKURRI.TTF"] = "Skurri",
         ["Fonts\\ARKai_T.ttf"] = "ARKai (Simplified Chinese)",
         ["Fonts\\bLEI00D.ttf"] = "bLEI (Traditional Chinese)",
         ["Fonts\\2002.TTF"] = "2002 (Korean)"
     }
+
+    -- The faces this addon ships, so every Peavers font dropdown offers them
+    -- without each addon having to know where they live. Listed even on a CJK
+    -- client: the picker shows them, IsFontCompatibleWithLocale declines them,
+    -- and a hidden option somebody has heard of is more confusing than a
+    -- visible one that explains itself.
+    local Theme = PeaversCommons.Theme
+    if Theme and Theme.BundledFonts then
+        for path, name in pairs(Theme.BundledFonts) do
+            fonts[path] = name
+        end
+    end
 
     if LibStub and LibStub:GetLibrary("LibSharedMedia-3.0", true) then
         local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
@@ -120,6 +192,37 @@ function ConfigManager.GetBarTextures()
     end
 
     return result
+end
+
+--------------------------------------------------------------------------------
+-- LibSharedMedia
+--
+-- Registering the bundled faces hands them to WeakAuras, Details, Plater and
+-- everything else that reads the shared media table - so somebody who likes how
+-- the Peavers bars look can put the same font on their auras without hunting
+-- for the file.
+--
+-- It is a courtesy, not a dependency: LSM is not required, not bundled, and
+-- everything here works without it. Registration is also idempotent, which
+-- matters because more than one addon in the collection may reach this during
+-- a login.
+--------------------------------------------------------------------------------
+function ConfigManager.RegisterSharedMedia()
+    if ConfigManager.sharedMediaRegistered then return false end
+    if not LibStub then return false end
+
+    local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
+    if not LSM then return false end
+
+    local Theme = PeaversCommons.Theme
+    if not Theme or not Theme.BundledFonts then return false end
+
+    for path, name in pairs(Theme.BundledFonts) do
+        LSM:Register(LSM.MediaType and LSM.MediaType.FONT or "font", name, path)
+    end
+
+    ConfigManager.sharedMediaRegistered = true
+    return true
 end
 
 -- Common default configuration values shared across addons

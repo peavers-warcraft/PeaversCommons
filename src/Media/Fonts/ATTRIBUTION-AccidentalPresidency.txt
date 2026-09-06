@@ -1,0 +1,47 @@
+Accidental Presidency
+=====================
+
+Copyright (C) 2000 Tepid Monkey Fonts - www.fontframe.com/tepidmonkey
+
+LICENCE STATUS: UNCONFIRMED. READ THIS BEFORE THE NEXT RELEASE.
+---------------------------------------------------------------
+
+Every other font in this directory ships with the licence that permits it to be
+here. IBM Plex Mono is SIL OFL 1.1, and OFL-IBMPlexMono.txt is the grant.
+
+This one has no such file, because no such grant has been found.
+
+What was checked:
+
+  * The TTF name table carries a copyright string (above) and nothing else.
+    Name IDs 13 (License Description) and 14 (License URL) are both absent, so
+    the file makes no statement about what may be done with it.
+
+  * The font arrived here from the Details! damage meter, which bundles it.
+    Details! also ships "SIL Open Font License.txt" in the same directory - but
+    that file covers Oswald ("with Reserved Font Name Oswald"), not this font.
+    Another project shipping a file is not a licence.
+
+  * Tepid Monkey Fonts published freeware and shareware faces around 2000. The
+    site in the copyright string is long gone, so the original terms could not
+    be read.
+
+Redistribution of this font inside PeaversCommons - which is published on
+CurseForge and GitHub - therefore rests on permission nobody has produced.
+
+Before the next release, one of:
+
+  1. Find the original licence and put it in this directory, replacing this
+     file. If it permits bundling, the matter is closed.
+
+  2. Contact the foundry for permission and record the reply here.
+
+  3. Swap the face. Everything that reads it goes through one constant:
+     Theme.Fonts.display in src/UI/Theme.lua. Point it at another file and the
+     whole collection follows. Oswald is the obvious candidate - condensed and
+     tall in the same way, already OFL, and already in the Details! folder with
+     its licence attached.
+
+Nothing here is a legal opinion. It is a record of what was and was not found,
+written at the point the file was added so that the question is asked once
+rather than discovered later.

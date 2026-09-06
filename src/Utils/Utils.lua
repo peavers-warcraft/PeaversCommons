@@ -286,8 +286,20 @@ local LOCALE_FONTS = {
 }
 
 -- Gets the locale-appropriate default font
+--
+-- Delegates to ConfigManager, which owns the collection's bundled default. This
+-- was the third independent copy of the same locale switch in this addon; the
+-- other two are in ConfigManager and DefaultConfig, and all three answered
+-- "Blizzard's font" until the collection got a face of its own. LOCALE_FONTS
+-- below is kept as the fallback, and because it is the only one of the three
+-- that knew about ruRU.
 -- @return string Font path
 function Utils.GetDefaultFont()
+    local ConfigManager = PeaversCommons and PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.GetDefaultFont then
+        return ConfigManager.GetDefaultFont()
+    end
+
     local locale = GetLocale()
     return LOCALE_FONTS[locale] or DEFAULT_FONT
 end
@@ -307,6 +319,16 @@ function Utils.GetFonts()
 
     for _, font in ipairs(builtInFonts) do
         table.insert(fonts, font)
+    end
+
+    -- The faces this addon ships. Added here as well as in ConfigManager.GetFonts
+    -- because the two return different shapes - an array of pairs here, a
+    -- path-keyed map there - and callers of one never see the other.
+    local Theme = PeaversCommons and PeaversCommons.Theme
+    if Theme and Theme.BundledFonts then
+        for path, name in pairs(Theme.BundledFonts) do
+            table.insert(fonts, { name = name, path = path })
+        end
     end
 
     -- Try to get fonts from LibSharedMedia
@@ -436,7 +458,7 @@ function Utils.SafeSetFont(fontString, fontPath, fontSize, fontFlags)
 
     -- Last resort: basic WoW font
     pcall(function()
-        fontString:SetFont(DEFAULT_FONT, fontSize, fontFlags)
+        fontString:SetFont(Utils.GetDefaultFont(), fontSize, fontFlags)
     end)
 
     return false

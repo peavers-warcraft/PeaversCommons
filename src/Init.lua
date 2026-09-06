@@ -1,5 +1,13 @@
 local PeaversCommons = _G.PeaversCommons
 
+-- Offer the bundled faces to the rest of the ecosystem, if LibSharedMedia is
+-- around to take them. Done at file load rather than on an event: another addon
+-- may build its font list before PLAYER_ENTERING_WORLD, and a face that turns up
+-- after the dropdown was populated is a face nobody finds.
+if PeaversCommons.ConfigManager and PeaversCommons.ConfigManager.RegisterSharedMedia then
+    PeaversCommons.ConfigManager.RegisterSharedMedia()
+end
+
 -- Register for player entering world to show a single greeting message
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
