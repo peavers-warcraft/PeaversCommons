@@ -342,8 +342,13 @@ function ConfigManager.New(cls, addon, defaultSettings, options)
     config.settingsKey = options.settingsKey
     config.DEBUG_ENABLED = false
     
+    -- Copied, not assigned. A bare `config[k] = v` hands the live config a
+    -- reference to the defaults table for every table-valued setting, so the
+    -- first thing to write into one silently rewrites the default it came from -
+    -- and every later Reset then restores the corruption instead of the
+    -- default. Anything with a table setting was born broken.
     for k, v in pairs(config.defaults) do
-        config[k] = v
+        config[k] = Utils.DeepCopy(v)
     end
     
     function config:Save()
@@ -395,13 +400,37 @@ function ConfigManager.New(cls, addon, defaultSettings, options)
         return true
     end
     
+    -- Put every setting back to its default, and drop anything that is not a
+    -- default at all.
+    --
+    -- Two things this has to get right that the obvious loop does not:
+    --
+    --   * Table defaults must be COPIED, not assigned. `self[k] = v` hands the
+    --     config a reference to the defaults table itself, so the next thing to
+    --     mutate that setting silently rewrites the default - and the reset
+    --     after it restores the corruption. Any config with a table setting was
+    --     one reset away from this.
+    --   * Keys the defaults do not mention have to go. A setting renamed in an
+    --     older version, or a scratch table some feature left behind, would
+    --     otherwise survive a reset and keep doing whatever it was doing, which
+    --     is exactly what somebody choosing "reset" is trying to stop.
     function config:Reset()
-        for k, v in pairs(self.defaults) do
-            self[k] = v
+        local reserved = {
+            addon = true, dbName = true, defaults = true, settingsKey = true,
+        }
+
+        for key, value in pairs(self) do
+            if type(value) ~= "function" and not reserved[key] and self.defaults[key] == nil then
+                self[key] = nil
+            end
         end
-        
+
+        for key, value in pairs(self.defaults) do
+            self[key] = Utils.DeepCopy(value)
+        end
+
         self:Save()
-        
+
         return true
     end
     
