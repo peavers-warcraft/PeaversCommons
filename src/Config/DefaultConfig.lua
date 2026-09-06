@@ -341,7 +341,14 @@ function DefaultConfig.GetFonts()
 end
 
 -- Returns a sorted table of available statusbar textures from various sources
+-- Delegates for the same reason the font functions do: one picker offering a
+-- different list from another is the kind of inconsistency nobody reports and
+-- everybody notices.
 function DefaultConfig.GetBarTextures()
+    local ConfigManager = PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.GetBarTextures then
+        return ConfigManager.GetBarTextures()
+    end
     local textures = {
         ["Interface\\TargetingFrame\\UI-StatusBar"] = "Default",
         ["Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar"] = "Skill Bar",

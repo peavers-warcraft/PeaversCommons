@@ -360,7 +360,19 @@ end
 
 -- Gets list of available bar textures, integrating with LibSharedMedia and Details if available
 -- @return table Array of {name, path} pairs
+-- Delegates to ConfigManager, which owns the collection's bundled fills. The
+-- shapes differ - an array of pairs here, a path-keyed map there - so this
+-- converts rather than forwarding the table straight through.
 function Utils.GetBarTextures()
+    local ConfigManager = PeaversCommons and PeaversCommons.ConfigManager
+    if ConfigManager and ConfigManager.GetBarTextures then
+        local out = {}
+        for path, name in pairs(ConfigManager.GetBarTextures()) do
+            table.insert(out, { name = name, path = path })
+        end
+        table.sort(out, function(a, b) return a.name < b.name end)
+        return out
+    end
     local textures = {}
 
     -- Built-in textures

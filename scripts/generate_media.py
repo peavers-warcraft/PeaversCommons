@@ -138,7 +138,65 @@ def make_rounded_border4() -> Image.Image:
     return make_rounded_border(size=16, radius=4)
 
 
+def make_bar_flat(width: int = 32, height: int = 32) -> Image.Image:
+    """The collection's default status bar fill: solid, opaque, pure white.
+
+    White matters more here than anywhere else in this file. SetStatusBarColor
+    multiplies, so a white master returns exactly the colour an addon asks for -
+    a class colour is the class colour, and a health bar at 40% red is the red
+    that was specified. Every grey or gradient bar texture in circulation
+    silently darkens and desaturates whatever it is given, which is why the same
+    class colour looks different in two addons using two textures.
+
+    32x32 rather than 1x1: the client stretches a status bar texture across the
+    bar, and a single-pixel master picks up filtering artefacts at the ends on
+    some drivers.
+    """
+    return Image.new("RGBA", (width, height), (255, 255, 255, 255))
+
+
+def make_bar_matte(width: int = 256, height: int = 64) -> Image.Image:
+    """Flat, with a fine grain so the fill reads as a surface rather than a slab.
+
+    Our own, drawn here, rather than copied from any of the matte textures in
+    circulation - the look is a mid-grey field with light noise, which is a
+    recipe rather than an authored image, and generating it avoids inheriting
+    somebody else's licence along with it.
+
+    Two deliberate differences from the textures this imitates:
+
+      * The base is white, not mid-grey. Those sit around 0.63 brightness, so
+        they mute every colour put through them by more than a third. Here the
+        grain dips below white instead of the whole field sitting below it, so
+        the bar has texture without the colour being wrong.
+      * The grain is monochrome and applied to RGB, not alpha. In alpha it would
+        make the bar faintly see-through in patches, and whatever is behind the
+        bar would show through the pattern as it moved.
+
+    Deterministic by construction - a fixed LCG rather than `random` - because
+    --check compares bytes and a reseeded generator would make every run differ.
+    """
+    img = Image.new("RGBA", (width, height))
+    px = img.load()
+
+    # Numerical Recipes LCG. Any fixed generator would do; this one is short,
+    # has no imports, and gives the same stream on every Python version.
+    state = 20260906
+    for y in range(height):
+        for x in range(width):
+            state = (1664525 * state + 1013904223) & 0xFFFFFFFF
+            # Top 8 bits are the well-behaved ones in an LCG; the low bits have
+            # very short periods and would band visibly.
+            grain = (state >> 24) & 0xFF
+            value = 255 - (grain * 22 // 255)   # 233..255
+            px[x, y] = (value, value, value, 255)
+
+    return img
+
+
 TEXTURES = {
+    "BarFlat.tga": make_bar_flat,
+    "BarMatte.tga": make_bar_matte,
     "Check16.tga": make_check,
     "RoundedFill4.tga": make_rounded_fill4,
     "RoundedBorder4.tga": make_rounded_border4,

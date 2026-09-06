@@ -151,14 +151,39 @@ function ConfigManager.GetFonts()
     return result
 end
 
+-- The collection's default status bar fill.
+--
+-- Named once in Theme.DefaultBarTexture, for the same reason the font is named
+-- once: this is what every Peavers bar is drawn with unless somebody has chosen
+-- otherwise, and moving it should be one line rather than fourteen.
+--
+-- Falls back to Blizzard's own rather than returning a path that may not load.
+-- SetStatusBarTexture against a missing file leaves the bar invisible, which
+-- reads as "the addon is broken" rather than "a texture is missing".
+function ConfigManager.GetDefaultBarTexture()
+    local Theme = PeaversCommons.Theme
+    return (Theme and Theme.DefaultBarTexture) or "Interface\\TargetingFrame\\UI-StatusBar"
+end
+
 -- Returns a sorted table of available statusbar textures from various sources
 function ConfigManager.GetBarTextures()
     local textures = {
-        ["Interface\\TargetingFrame\\UI-StatusBar"] = "Default",
+        ["Interface\\TargetingFrame\\UI-StatusBar"] = "Blizzard",
         ["Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar"] = "Skill Bar",
         ["Interface\\PVPFrame\\UI-PVP-Progress-Bar"] = "PVP Bar",
-        ["Interface\\RaidFrame\\Raid-Bar-Hp-Fill"] = "Raid"
+        ["Interface\\RaidFrame\\Raid-Bar-Hp-Fill"] = "Raid",
+        -- WHITE8x8 is what most people reach for when they want a flat bar, and
+        -- it is worth naming rather than leaving people to type it.
+        ["Interface\\Buttons\\WHITE8x8"] = "Solid White"
     }
+
+    -- The fills this addon ships.
+    local Theme = PeaversCommons.Theme
+    if Theme and Theme.BundledBarTextures then
+        for path, name in pairs(Theme.BundledBarTextures) do
+            textures[path] = name
+        end
+    end
 
     if LibStub and LibStub:GetLibrary("LibSharedMedia-3.0", true) then
         local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
@@ -221,6 +246,10 @@ function ConfigManager.RegisterSharedMedia()
         LSM:Register(LSM.MediaType and LSM.MediaType.FONT or "font", name, path)
     end
 
+    for path, name in pairs(Theme.BundledBarTextures or {}) do
+        LSM:Register(LSM.MediaType and LSM.MediaType.STATUSBAR or "statusbar", name, path)
+    end
+
     ConfigManager.sharedMediaRegistered = true
     return true
 end
@@ -241,7 +270,10 @@ ConfigManager.CommonDefaults = {
     barBgAlpha = 0.5,
     barAlpha = 1.0,
     textAlpha = 1.0,
-    barTexture = "Interface\\TargetingFrame\\UI-StatusBar",
+    -- Resolved through GetDefaultBarTexture() rather than written out, so the
+    -- collection default is in one place. Theme loads before this file, so the
+    -- value is available at the moment this table is built.
+    barTexture = ConfigManager.GetDefaultBarTexture(),
 
     -- Font settings (fontFace will be set based on locale)
     fontFace = nil,

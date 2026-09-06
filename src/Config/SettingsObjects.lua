@@ -117,7 +117,7 @@ function SettingsObjects.BarAppearance(parent, config, y, opts)
     if not exclude.barTexture then
         local dropdown = W:CreateDropdown(parent, "Bar Texture", {
             options = TextureDropdownOptions(),
-            selected = config.barTexture or "Interface\\TargetingFrame\\UI-StatusBar",
+            selected = config.barTexture or PeaversCommons.ConfigManager.GetDefaultBarTexture(),
             width = width,
             onChange = MakeOnChange(config, "barTexture", opts),
         })

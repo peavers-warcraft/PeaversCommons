@@ -135,6 +135,14 @@ local FONT_PATH = MEDIA_PATH .. "Fonts\\"
 -- Texture:SetVertexColor. Like fonts, newly added files need a full client
 -- restart before the client will find them.
 Theme.Textures = {
+    -- Status bar fills. The default is deliberately the plain one: white
+    -- multiplies to exactly the colour an addon asks for, so a class colour is
+    -- the class colour rather than the class colour as filtered through a grey
+    -- texture. Matte is the same fill with a fine grain for anyone who wants
+    -- the bar to read as a surface.
+    barFlat       = MEDIA_PATH .. "Textures\\BarFlat.tga",
+    barMatte      = MEDIA_PATH .. "Textures\\BarMatte.tga",
+
     check         = MEDIA_PATH .. "Textures\\Check16.tga",
     circle        = MEDIA_PATH .. "Textures\\Circle64.tga",
     roundedFill   = MEDIA_PATH .. "Textures\\RoundedFill8.tga",
@@ -271,6 +279,19 @@ Theme.Fonts = {
     -- fourteen-addon one. See src/Media/Fonts/ATTRIBUTION-AccidentalPresidency.txt.
     display      = FONT_PATH .. "AccidentalPresidency.ttf",
 }
+
+-- The bundled status bar fills, keyed by path, for the pickers and for
+-- LibSharedMedia. Named the way they will appear in a dropdown next to
+-- Blizzard's own, so "Peavers" is the thing that sorts them together.
+Theme.BundledBarTextures = {
+    [Theme.Textures.barFlat]  = "Peavers Flat",
+    [Theme.Textures.barMatte] = "Peavers Matte",
+}
+
+-- The collection's default status bar fill. One constant, for the same reason
+-- Theme.Fonts.display is one constant: changing what every Peavers bar is drawn
+-- with should be this line and nothing else.
+Theme.DefaultBarTexture = Theme.Textures.barFlat
 
 -- The bundled faces, for anything that needs to know whether a path is ours -
 -- chiefly the locale check, since none of them cover CJK.
