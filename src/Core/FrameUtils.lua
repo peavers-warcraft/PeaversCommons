@@ -121,6 +121,62 @@ function FrameUtils.CreateScrollFrame(parent)
     return scrollFrame, content
 end
 
+-- Modern scroll box: a WowScrollBox with a MinimalScrollBar beside it, the pair
+-- Blizzard has used everywhere since Dragonflight. The thin bar sits in its own
+-- gutter rather than overlapping the content, which is the practical difference
+-- from CreateScrollFrame - that one hands back a frame whose right edge runs
+-- under the scroll bar.
+--
+-- CreateScrollFrame is left alone: the settings pages are built against it, and
+-- its content frame is measured differently.
+--
+-- Returns scrollBox, content, scrollBar. The caller sizes the content and calls
+-- FrameUtils.UpdateScrollBox after filling it.
+function FrameUtils.CreateScrollBox(parent, opts)
+    opts = opts or {}
+    local gutter = opts.gutter or 24
+    local inset = opts.inset or 0
+
+    -- Every piece of this arrived in Dragonflight. On anything older, or if the
+    -- templates are ever renamed, fall back rather than erroring at load.
+    if not (ScrollUtil and CreateScrollBoxLinearView and ScrollBoxConstants) then
+        return nil
+    end
+
+    local scrollBox = CreateFrame("Frame", nil, parent, "WowScrollBox")
+    scrollBox:SetPoint("TOPLEFT", inset, opts.top or 0)
+    scrollBox:SetPoint("BOTTOMRIGHT", -gutter, opts.bottom or 0)
+
+    local scrollBar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
+    scrollBar:SetPoint("TOPLEFT", scrollBox, "TOPRIGHT", 8, 0)
+    scrollBar:SetPoint("BOTTOMLEFT", scrollBox, "BOTTOMRIGHT", 8, 0)
+
+    -- A linear view scrolls one child, which has to say so before the view is
+    -- initialised.
+    local content = CreateFrame("Frame", nil, scrollBox)
+    content.scrollable = true
+    content:SetPoint("TOPLEFT")
+    content:SetHeight(1)
+
+    local view = CreateScrollBoxLinearView()
+    view:SetPanExtent(50)
+    ScrollUtil.InitScrollBoxWithScrollBar(scrollBox, scrollBar, view)
+
+    return scrollBox, content, scrollBar
+end
+
+-- Re-measure after the content has changed, and take the bar away when there is
+-- nothing to scroll.
+function FrameUtils.UpdateScrollBox(scrollBox, scrollBar)
+    if not scrollBox then return end
+
+    scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
+
+    if scrollBar then
+        scrollBar:SetShown(scrollBox:HasScrollableExtent())
+    end
+end
+
 function FrameUtils.CreateFrame(name, parent, width, height, backdrop)
     local frame = CreateFrame("Frame", name, parent, backdrop and "BackdropTemplate" or nil)
 

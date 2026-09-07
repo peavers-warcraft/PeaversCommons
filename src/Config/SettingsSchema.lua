@@ -35,6 +35,8 @@
 --   write     optional: what the widget gives -> stored value
 --   hidden    optional: f(scope) -> hide this row entirely
 --   disabled  optional: f(scope) -> grey this row out
+--   global    optional: this setting is addon-wide, not per-thing - it is read
+--             and written on the config itself, ignoring the scope
 --
 -- `surface` is the one worth thinking about. "both" is for anything decided by
 -- looking at the frame while you drag it: sizes, spacing, opacity. "config" is
@@ -212,11 +214,20 @@ end
 -- Reading and writing
 --------------------------------------------------------------------------------
 
-function Schema:Scope(context)
+-- Where a setting is stored. Addon-wide settings sit on the config itself, which
+-- is what a schema with no scope of its own would have used anyway; the scope
+-- exists only for addons whose settings repeat per frame, per unit or per bar.
+function Schema:Scope(context, entry)
+    if entry and entry.global then
+        return self.config
+    end
     return self.scope(self.config, context) or {}
 end
 
-function Schema:Defaults(context)
+function Schema:Defaults(context, entry)
+    if entry and entry.global then
+        return self.config.defaults or {}
+    end
     return self.scopeDefaults(self.config, context) or {}
 end
 
@@ -234,10 +245,10 @@ local function Transform(entry, stored)
 end
 
 function Schema:Read(entry, context)
-    local stored = self:Scope(context)[entry.key]
+    local stored = self:Scope(context, entry)[entry.key]
 
     if stored == nil then
-        stored = self:Defaults(context)[entry.key]
+        stored = self:Defaults(context, entry)[entry.key]
     end
     if stored == nil then
         stored = entry.default
@@ -250,7 +261,7 @@ function Schema:Read(entry, context)
 end
 
 function Schema:Default(entry, context)
-    local stored = self:Defaults(context)[entry.key]
+    local stored = self:Defaults(context, entry)[entry.key]
     if stored == nil then stored = entry.default end
     if stored == nil then stored = Resolve(entry.fallback) end
 
@@ -258,7 +269,7 @@ function Schema:Default(entry, context)
 end
 
 function Schema:Write(entry, context, value)
-    local scope = self:Scope(context)
+    local scope = self:Scope(context, entry)
 
     local stored = value
     if entry.outlineWrite then
@@ -280,12 +291,12 @@ end
 
 function Schema:IsHidden(entry, context)
     if not entry.hidden then return false end
-    return entry.hidden(self:Scope(context)) and true or false
+    return entry.hidden(self:Scope(context, entry)) and true or false
 end
 
 function Schema:IsDisabled(entry, context)
     if not entry.disabled then return false end
-    return entry.disabled(self:Scope(context)) and true or false
+    return entry.disabled(self:Scope(context, entry)) and true or false
 end
 
 --------------------------------------------------------------------------------

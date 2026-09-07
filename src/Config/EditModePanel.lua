@@ -29,7 +29,15 @@ local PANEL_WIDTH = 400
 local MAX_HEIGHT = 520
 local MIN_HEIGHT = 120
 local GAP = 12
-local INDENT = 16
+local INDENT = 14
+
+-- The scroll bar gets a gutter of its own rather than sitting over the content.
+-- Widget widths are derived from what is left, so a dropdown's arrow is never
+-- underneath the bar.
+local LEFT_INSET = 12
+local SCROLL_GUTTER = 26
+local CONTENT_WIDTH = PANEL_WIDTH - LEFT_INSET - SCROLL_GUTTER
+local WIDGET_WIDTH = CONTENT_WIDTH - (INDENT * 2)
 
 -- Row heights, matched to the settings page so the two surfaces feel like one.
 local ROW = 30
@@ -63,14 +71,30 @@ local function Build()
     close:SetScript("OnClick", function() EditModePanel:Hide() end)
     panel.Close = close
 
-    local scrollHost = CreateFrame("Frame", nil, panel)
-    scrollHost:SetPoint("TOPLEFT", 0, -40)
-    scrollHost:SetPoint("BOTTOMRIGHT", 0, 8)
-    panel.ScrollHost = scrollHost
+    local scrollBox, content, scrollBar = FrameUtils.CreateScrollBox(panel, {
+        inset = LEFT_INSET,
+        gutter = SCROLL_GUTTER,
+        top = -40,
+        bottom = 10,
+    })
 
-    local scrollFrame, content = FrameUtils.CreateScrollFrame(scrollHost)
-    panel.ScrollFrame = scrollFrame
+    -- CreateScrollBox declines rather than errors if the modern scroll
+    -- templates are not there. The older frame is worse - its bar overlaps the
+    -- content - but a panel that scrolls badly beats a panel that does not open.
+    if not scrollBox then
+        local host = CreateFrame("Frame", nil, panel)
+        host:SetPoint("TOPLEFT", 0, -40)
+        host:SetPoint("BOTTOMRIGHT", 0, 8)
+
+        local legacyScroll, legacyContent = FrameUtils.CreateScrollFrame(host)
+        panel.LegacyScroll = legacyScroll
+        content = legacyContent
+    end
+
+    panel.ScrollBox = scrollBox
+    panel.ScrollBar = scrollBar
     panel.Content = content
+    content:SetWidth(CONTENT_WIDTH)
 
     panel:EnableMouse(true)
 
@@ -103,7 +127,7 @@ local function Render(panel, spec)
         region:SetParent(nil)
     end
 
-    local width = PANEL_WIDTH - (INDENT * 2) - 24
+    local width = WIDGET_WIDTH
     local y = -8
 
     local function Place(widget, height)
@@ -159,35 +183,58 @@ local function Render(panel, spec)
                     onChange = function(r, g, b) Commit(entry, { r = r, g = g, b = b }) end,
                 }), ROW)
 
-            elseif entry.kind == "text" then
-                -- The one widget the Edit Mode dialog has no answer for at all.
+            elseif entry.kind == "text" or entry.kind == "number" then
+                -- The widget the Edit Mode dialog has no answer for at all. The
+                -- numeric variant is what makes typed offsets possible: lining
+                -- two frames up exactly means entering the same number twice,
+                -- which no amount of dragging will do for you.
+                local numeric = entry.kind == "number"
                 local input = W:CreateInput(content, entry.label, {
                     width = width,
-                    text = tostring(value or ""),
+                    text = tostring(value or (numeric and 0 or "")),
                 })
                 input:SetPoint("TOPLEFT", INDENT, y)
                 y = y - INPUT
 
-                local function CommitText()
-                    Commit(entry, input:GetText())
+                local function CommitInput()
+                    local text = input:GetText()
+
+                    if not numeric then
+                        Commit(entry, text)
+                        return
+                    end
+
+                    local entered = tonumber(text)
+                    if entered then
+                        entered = math.floor(entered + 0.5)
+                        input:SetText(tostring(entered))
+                        Commit(entry, entered)
+                    else
+                        -- Not a number: put back what is actually stored rather
+                        -- than leaving the box showing something never applied.
+                        input:SetText(tostring(schema:Read(entry, context) or 0))
+                    end
                 end
-                input.editBox:HookScript("OnEnterPressed", CommitText)
-                input.editBox:HookScript("OnEditFocusLost", CommitText)
+
+                -- Enter also clears focus, so both fire; committing is
+                -- idempotent.
+                input.editBox:HookScript("OnEnterPressed", CommitInput)
+                input.editBox:HookScript("OnEditFocusLost", CommitInput)
             end
         end
     end
 
     local used = math.abs(y) + 16
+    content:SetWidth(CONTENT_WIDTH)
     content:SetHeight(used)
 
     local height = math.max(MIN_HEIGHT, math.min(MAX_HEIGHT, used + 56))
     panel:SetHeight(height)
 
-    -- UIPanelScrollFrameTemplate leaves its bar up with nothing to scroll.
-    local bar = panel.ScrollFrame.ScrollBar
-    if bar then
-        bar:SetShown(used > panel.ScrollFrame:GetHeight())
-    end
+    -- Re-measure once the panel is its final height, or the scroll box is still
+    -- working from the previous group's extent and the bar shows when it should
+    -- not.
+    FrameUtils.UpdateScrollBox(panel.ScrollBox, panel.ScrollBar)
 end
 
 --------------------------------------------------------------------------------
