@@ -347,7 +347,15 @@ function Schema:SectionsForSurface(surface)
     for _, section in ipairs(self.sections) do
         local entries = bySection[section.key]
         if entries and #entries > 0 then
-            out[#out + 1] = { key = section.key, label = section.label, entries = entries }
+            out[#out + 1] = {
+                key = section.key,
+                label = section.label,
+                entries = entries,
+                -- A group can name one thing at a time rather than list them
+                -- all: the selector picks which, and its choice becomes the
+                -- context the group's settings are read and written against.
+                selector = section.selector,
+            }
         end
     end
     return out

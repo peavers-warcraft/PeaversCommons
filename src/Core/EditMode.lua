@@ -70,6 +70,7 @@ local function OpenGroup(registration, section)
         schema = registration.schema,
         context = registration.context,
         entries = section.entries,
+        selector = section.selector,
         anchorTo = dialog,
     })
 end

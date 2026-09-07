@@ -112,9 +112,38 @@ end
 -- Drawing a group
 --------------------------------------------------------------------------------
 
+-- Which choice a selector group is currently showing, remembered per group so
+-- that closing the panel and reopening it lands back on the same one.
+local selection = {}
+
+local function Resolve(value, ...)
+    if type(value) == "function" then return value(...) end
+    return value
+end
+
+-- The context a group's settings are read and written against: normally the
+-- registration's own (a unit, say), but a selector group's is whatever its
+-- dropdown is pointing at.
+local function ContextFor(spec)
+    if not spec.selector then return spec.context end
+
+    local current = selection[spec.key]
+    if current ~= nil then return current end
+
+    local values = Resolve(spec.selector.values) or {}
+    local default = Resolve(spec.selector.default)
+    if default == nil then
+        default = values[1] and values[1].value
+    end
+
+    selection[spec.key] = default
+    return default
+end
+
 local function Render(panel, spec)
     local content = panel.Content
-    local schema, context = spec.schema, spec.context
+    local schema = spec.schema
+    local context = ContextFor(spec)
 
     -- Widgets are placed at fixed offsets rather than laid out, so a redraw
     -- means starting from an empty frame.
@@ -144,6 +173,27 @@ local function Render(panel, spec)
         if entry.revealsOthers then
             EditModePanel:Refresh()
         end
+    end
+
+    -- The selector sits above the settings it governs, because it decides what
+    -- they mean.
+    if spec.selector then
+        local values = Resolve(spec.selector.values) or {}
+        Place(W:CreateDropdown(content, spec.selector.label or "Adjust", {
+            options = values,
+            selected = context,
+            width = width,
+            onChange = function(value)
+                selection[spec.key] = value
+                EditModePanel:Refresh()
+            end,
+        }), DROPDOWN)
+
+        local rule = content:CreateTexture(nil, "ARTWORK")
+        rule:SetPoint("TOPLEFT", INDENT, y - 2)
+        rule:SetSize(width, 1)
+        rule:SetColorTexture(1, 1, 1, 0.12)
+        y = y - 12
     end
 
     for _, entry in ipairs(spec.entries) do
