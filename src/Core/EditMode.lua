@@ -41,69 +41,29 @@ function EditMode:IsEditing()
 end
 
 --------------------------------------------------------------------------------
--- Sections
+-- Groups
 --
--- Collapse state lives in the addon's own config, so it survives a reload and
--- cannot collide with another addon's sections.
+-- Every group but the first becomes a button in the dialog that opens the
+-- settings panel beside it. The accordion that used to live here - expanders,
+-- collapse state on the config, a deferred rebuild to keep the arrows honest -
+-- existed only to make a dialog with no scroll bar survive thirty rows. The
+-- panel scrolls, so none of it is needed.
 --------------------------------------------------------------------------------
 
-local function SectionStore(registration)
-    if registration.sectionStore then
-        return registration.sectionStore()
-    end
+local function OpenGroup(registration, section)
+    local panel = PeaversCommons.EditModePanel
+    if not panel then return end
 
-    local config = registration.schema.config
-    config.editModeSections = config.editModeSections or {}
-    return config.editModeSections
-end
-
-local function SectionShown(registration, key)
-    return SectionStore(registration)[key] and true or false
-end
-
--- Ask Edit Mode to rebuild whichever dialog is open. The library checks that the
--- frame it is handed is the selected one, so offering it every registered frame
--- costs nothing and saves tracking the selection.
-local function RebuildOpenDialog()
-    for _, registration in ipairs(EditMode.registrations) do
-        LibEditMode:RefreshFrameSettings(registration.frame)
-    end
-end
-
--- One section open at a time.
---
--- The rebuild afterwards is not cosmetic. An expander widget reads its own open
--- state once, when the dialog is built, and never again; its Refresh only
--- re-evaluates whether it is hidden. A section closed behind its back keeps
--- drawing an open arrow over no rows and takes two clicks to reopen.
---
--- Two things keep that from running away. It is deferred a frame, because this
--- runs from inside the expander's own click handler, which carries on using the
--- widget after we return - and the rebuild releases it back to the pool. And it
--- only happens when a section was actually closed: building the dialog replays
--- this setter once per expander, so without that condition the open one would
--- ask for a rebuild every time, and each rebuild would ask for another.
-local function SetSection(registration, key, value)
-    local sections = SectionStore(registration)
-    local closedAnother = false
-
-    if value then
-        for _, section in ipairs(registration.sections) do
-            if section.key ~= key and sections[section.key] then
-                sections[section.key] = false
-                closedAnother = true
-            end
-        end
-    end
-
-    sections[key] = value and true or false
-
-    local config = registration.schema.config
-    if config and config.Save then config:Save() end
-
-    if closedAnother then
-        C_Timer.After(0, RebuildOpenDialog)
-    end
+    panel:Show({
+        -- Keyed by frame as well as group, so clicking "Bars" on one frame and
+        -- then on another reopens rather than toggling shut.
+        key = tostring(registration.frame) .. ":" .. section.key,
+        title = (registration.name or "") .. " - " .. section.label,
+        schema = registration.schema,
+        context = registration.context,
+        entries = section.entries,
+        anchorTo = registration.dialog,
+    })
 end
 
 --------------------------------------------------------------------------------
@@ -170,7 +130,7 @@ function Builders.color(schema, entry, context)
     }
 end
 
-local function ToSetting(registration, entry, sectionKey)
+local function ToSetting(registration, entry)
     local builder = Builders[entry.kind]
     if not builder then return nil end
 
@@ -180,15 +140,8 @@ local function ToSetting(registration, entry, sectionKey)
     setting.name = entry.label
     setting.desc = entry.desc
 
-    -- A row is hidden when its section is collapsed, or when the setting itself
-    -- has nothing to offer right now.
-    if sectionKey or entry.hidden then
-        setting.hidden = function()
-            if sectionKey and not SectionShown(registration, sectionKey) then
-                return true
-            end
-            return schema:IsHidden(entry, context)
-        end
+    if entry.hidden then
+        setting.hidden = function() return schema:IsHidden(entry, context) end
     end
 
     if entry.disabled then
@@ -198,27 +151,17 @@ local function ToSetting(registration, entry, sectionKey)
     return setting
 end
 
--- The first section is drawn plain at the top of the dialog rather than behind
--- an expander: turning a frame on and sizing it are what people open this for,
--- and putting them one click away to save a few rows would be a poor trade.
+-- Only the first group is drawn in the dialog itself. Turning a frame on and
+-- sizing it are what people open Edit Mode for, and those belong under your
+-- cursor rather than a click away; everything else is a button that opens the
+-- panel, where there is room to read it.
 local function BuildSettings(registration)
     local settings = {}
 
-    for index, section in ipairs(registration.sections) do
-        local grouped = index > 1 or section.key ~= registration.topSection
-
-        if grouped then
-            settings[#settings + 1] = {
-                kind = ST.Expander,
-                name = section.label,
-                default = false,
-                get = function() return SectionShown(registration, section.key) end,
-                set = function(_, value) SetSection(registration, section.key, value) end,
-            }
-        end
-
-        for _, entry in ipairs(section.entries) do
-            local setting = ToSetting(registration, entry, grouped and section.key or nil)
+    local top = registration.sections[1]
+    if top and top.key == registration.topSection then
+        for _, entry in ipairs(top.entries) do
+            local setting = ToSetting(registration, entry)
             if setting then
                 settings[#settings + 1] = setting
             end
@@ -226,6 +169,24 @@ local function BuildSettings(registration)
     end
 
     return settings
+end
+
+-- One button per remaining group, ahead of whatever buttons the addon adds of
+-- its own. The trailing ellipsis is the only thing distinguishing "opens a
+-- panel" from "does something", since the dialog gives them the same widget.
+local function BuildGroupButtons(registration)
+    local buttons = {}
+
+    for index, section in ipairs(registration.sections) do
+        if index > 1 or section.key ~= registration.topSection then
+            buttons[#buttons + 1] = {
+                text = section.label .. "...",
+                click = function() OpenGroup(registration, section) end,
+            }
+        end
+    end
+
+    return buttons
 end
 
 --------------------------------------------------------------------------------
@@ -245,6 +206,12 @@ local function HookCallbacks()
 
     LibEditMode:RegisterCallback("exit", function()
         editing = false
+
+        -- The panel hangs off the dialog and has no business outliving it.
+        if PeaversCommons.EditModePanel then
+            PeaversCommons.EditModePanel:Hide()
+        end
+
         for _, registration in ipairs(EditMode.registrations) do
             if registration.onExit then registration.onExit(registration.frame) end
         end
@@ -265,12 +232,11 @@ end
 --   schema             a SettingsSchema
 --   context            passed through to the schema's scope, for per-thing configs
 --   default            { point, x, y } for the Reset Position button
---   topSection         section drawn plain above the expanders (default: the first)
+--   topSection         group drawn in the dialog itself (default: the first)
 --   onPositionChanged  f(frame, point, x, y) - the addon saves and applies
 --   onEnter / onExit   f(frame)
 --   onLayout           f(frame, layoutName, layoutIndex)
---   buttons            list of { text, click }
---   sectionStore       f() -> table, if collapse state should not live on the config
+--   buttons            list of { text, click }, added after the group buttons
 function EditMode.Register(_, spec)
     if not EditMode.available then return nil end
     if not spec or not spec.frame or not spec.schema then return nil end
@@ -282,7 +248,7 @@ function EditMode.Register(_, spec)
         onEnter = spec.onEnter,
         onExit = spec.onExit,
         onLayout = spec.onLayout,
-        sectionStore = spec.sectionStore,
+        name = spec.name,
         sections = spec.schema:SectionsForSurface("editmode"),
     }
     registration.topSection = spec.topSection or (registration.sections[1] and registration.sections[1].key)
@@ -297,8 +263,16 @@ function EditMode.Register(_, spec)
 
     LibEditMode:AddFrameSettings(spec.frame, BuildSettings(registration))
 
-    if spec.buttons and #spec.buttons > 0 then
-        LibEditMode:AddFrameSettingsButtons(spec.frame, spec.buttons)
+    -- The dialog is built by the first AddFrame, so this is the earliest the
+    -- panel can be told what to anchor itself to.
+    registration.dialog = LibEditMode.internal and LibEditMode.internal.dialog
+
+    local buttons = BuildGroupButtons(registration)
+    for _, button in ipairs(spec.buttons or {}) do
+        buttons[#buttons + 1] = button
+    end
+    if #buttons > 0 then
+        LibEditMode:AddFrameSettingsButtons(spec.frame, buttons)
     end
 
     EditMode.registrations[#EditMode.registrations + 1] = registration
