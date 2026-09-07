@@ -33,8 +33,17 @@
 --   desc      a sentence for the tooltip
 --   read      optional: stored value -> what the widget shows
 --   write     optional: what the widget gives -> stored value
---   hidden    optional: f(scope) -> hide this row entirely
---   disabled  optional: f(scope) -> grey this row out
+--   hidden    optional: f(scope, context) -> hide this row entirely
+--   disabled  optional: f(scope, context) -> grey this row out
+--   global    optional: this setting is addon-wide, not per-thing - it is read
+--             and written on the config itself, ignoring the scope
+--   getValue  optional: f(config, context) -> value, replacing the key lookup
+--   setValue  optional: f(config, context, value), replacing the key write
+--
+-- getValue/setValue are for settings that are not simply a field: a colour kept
+-- in a nested table per stat, say, or one derived from something else. An entry
+-- using them still needs a key, because that is what identifies it to the
+-- surfaces and to whatever the addon does after a write.
 --
 -- `surface` is the one worth thinking about. "both" is for anything decided by
 -- looking at the frame while you drag it: sizes, spacing, opacity. "config" is
@@ -200,7 +209,12 @@ function Schema:Fill(entry)
     filled.label = filled.label or entry.key
     filled.unit = filled.unit or COMMON_UNITS[entry.key]
 
-    if entry.key == "fontOutline" and not filled.read and not filled.write then
+    -- Most of the collection stores the outline as a tick and wants the
+    -- string/boolean handling below. PeaversChat stores one of three values and
+    -- draws a dropdown for it, so the transform is applied only where the widget
+    -- is actually a checkbox - otherwise "NONE" comes back as false.
+    if entry.key == "fontOutline" and filled.kind == "checkbox"
+        and not filled.read and not filled.write then
         filled.read = OUTLINE_TRANSFORM.read
         filled.outlineWrite = true
     end
@@ -212,11 +226,20 @@ end
 -- Reading and writing
 --------------------------------------------------------------------------------
 
-function Schema:Scope(context)
+-- Where a setting is stored. Addon-wide settings sit on the config itself, which
+-- is what a schema with no scope of its own would have used anyway; the scope
+-- exists only for addons whose settings repeat per frame, per unit or per bar.
+function Schema:Scope(context, entry)
+    if entry and entry.global then
+        return self.config
+    end
     return self.scope(self.config, context) or {}
 end
 
-function Schema:Defaults(context)
+function Schema:Defaults(context, entry)
+    if entry and entry.global then
+        return self.config.defaults or {}
+    end
     return self.scopeDefaults(self.config, context) or {}
 end
 
@@ -234,10 +257,14 @@ local function Transform(entry, stored)
 end
 
 function Schema:Read(entry, context)
-    local stored = self:Scope(context)[entry.key]
+    if entry.getValue then
+        return Transform(entry, entry.getValue(self.config, context))
+    end
+
+    local stored = self:Scope(context, entry)[entry.key]
 
     if stored == nil then
-        stored = self:Defaults(context)[entry.key]
+        stored = self:Defaults(context, entry)[entry.key]
     end
     if stored == nil then
         stored = entry.default
@@ -250,7 +277,13 @@ function Schema:Read(entry, context)
 end
 
 function Schema:Default(entry, context)
-    local stored = self:Defaults(context)[entry.key]
+    -- A setting with its own accessor has no field to read a default from, so
+    -- the entry has to carry one.
+    if entry.getValue then
+        return Transform(entry, entry.default)
+    end
+
+    local stored = self:Defaults(context, entry)[entry.key]
     if stored == nil then stored = entry.default end
     if stored == nil then stored = Resolve(entry.fallback) end
 
@@ -258,7 +291,7 @@ function Schema:Default(entry, context)
 end
 
 function Schema:Write(entry, context, value)
-    local scope = self:Scope(context)
+    local scope = self:Scope(context, entry)
 
     local stored = value
     if entry.outlineWrite then
@@ -267,7 +300,11 @@ function Schema:Write(entry, context, value)
         stored = entry.write(value, scope[entry.key])
     end
 
-    scope[entry.key] = stored
+    if entry.setValue then
+        entry.setValue(self.config, context, stored)
+    else
+        scope[entry.key] = stored
+    end
 
     if self.config and self.config.Save then
         self.config:Save()
@@ -280,12 +317,12 @@ end
 
 function Schema:IsHidden(entry, context)
     if not entry.hidden then return false end
-    return entry.hidden(self:Scope(context)) and true or false
+    return entry.hidden(self:Scope(context, entry), context) and true or false
 end
 
 function Schema:IsDisabled(entry, context)
     if not entry.disabled then return false end
-    return entry.disabled(self:Scope(context)) and true or false
+    return entry.disabled(self:Scope(context, entry), context) and true or false
 end
 
 --------------------------------------------------------------------------------
@@ -315,7 +352,15 @@ function Schema:SectionsForSurface(surface)
     for _, section in ipairs(self.sections) do
         local entries = bySection[section.key]
         if entries and #entries > 0 then
-            out[#out + 1] = { key = section.key, label = section.label, entries = entries }
+            out[#out + 1] = {
+                key = section.key,
+                label = section.label,
+                entries = entries,
+                -- A group can name one thing at a time rather than list them
+                -- all: the selector picks which, and its choice becomes the
+                -- context the group's settings are read and written against.
+                selector = section.selector,
+            }
         end
     end
     return out

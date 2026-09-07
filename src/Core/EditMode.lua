@@ -41,69 +41,38 @@ function EditMode:IsEditing()
 end
 
 --------------------------------------------------------------------------------
--- Sections
+-- Groups
 --
--- Collapse state lives in the addon's own config, so it survives a reload and
--- cannot collide with another addon's sections.
+-- Every group but the first becomes a button in the dialog that opens the
+-- settings panel beside it. The accordion that used to live here - expanders,
+-- collapse state on the config, a deferred rebuild to keep the arrows honest -
+-- existed only to make a dialog with no scroll bar survive thirty rows. The
+-- panel scrolls, so none of it is needed.
 --------------------------------------------------------------------------------
 
-local function SectionStore(registration)
-    if registration.sectionStore then
-        return registration.sectionStore()
+local function OpenGroup(registration, section)
+    local panel = PeaversCommons.EditModePanel
+    if not panel then return end
+
+    -- Systems resolve their dialog when the group is opened rather than at
+    -- registration: Blizzard's own dialog is what they hang off, and which one
+    -- of ours is showing depends on what the user selected.
+    local dialog = registration.dialog
+    if type(dialog) == "function" then
+        dialog = dialog()
     end
 
-    local config = registration.schema.config
-    config.editModeSections = config.editModeSections or {}
-    return config.editModeSections
-end
-
-local function SectionShown(registration, key)
-    return SectionStore(registration)[key] and true or false
-end
-
--- Ask Edit Mode to rebuild whichever dialog is open. The library checks that the
--- frame it is handed is the selected one, so offering it every registered frame
--- costs nothing and saves tracking the selection.
-local function RebuildOpenDialog()
-    for _, registration in ipairs(EditMode.registrations) do
-        LibEditMode:RefreshFrameSettings(registration.frame)
-    end
-end
-
--- One section open at a time.
---
--- The rebuild afterwards is not cosmetic. An expander widget reads its own open
--- state once, when the dialog is built, and never again; its Refresh only
--- re-evaluates whether it is hidden. A section closed behind its back keeps
--- drawing an open arrow over no rows and takes two clicks to reopen.
---
--- Two things keep that from running away. It is deferred a frame, because this
--- runs from inside the expander's own click handler, which carries on using the
--- widget after we return - and the rebuild releases it back to the pool. And it
--- only happens when a section was actually closed: building the dialog replays
--- this setter once per expander, so without that condition the open one would
--- ask for a rebuild every time, and each rebuild would ask for another.
-local function SetSection(registration, key, value)
-    local sections = SectionStore(registration)
-    local closedAnother = false
-
-    if value then
-        for _, section in ipairs(registration.sections) do
-            if section.key ~= key and sections[section.key] then
-                sections[section.key] = false
-                closedAnother = true
-            end
-        end
-    end
-
-    sections[key] = value and true or false
-
-    local config = registration.schema.config
-    if config and config.Save then config:Save() end
-
-    if closedAnother then
-        C_Timer.After(0, RebuildOpenDialog)
-    end
+    panel:Show({
+        -- Keyed by frame as well as group, so clicking "Bars" on one frame and
+        -- then on another reopens rather than toggling shut.
+        key = registration.key .. ":" .. section.key,
+        title = (registration.name or "") .. " - " .. section.label,
+        schema = registration.schema,
+        context = registration.context,
+        entries = section.entries,
+        selector = section.selector,
+        anchorTo = dialog,
+    })
 end
 
 --------------------------------------------------------------------------------
@@ -170,7 +139,7 @@ function Builders.color(schema, entry, context)
     }
 end
 
-local function ToSetting(registration, entry, sectionKey)
+local function ToSetting(registration, entry)
     local builder = Builders[entry.kind]
     if not builder then return nil end
 
@@ -180,15 +149,8 @@ local function ToSetting(registration, entry, sectionKey)
     setting.name = entry.label
     setting.desc = entry.desc
 
-    -- A row is hidden when its section is collapsed, or when the setting itself
-    -- has nothing to offer right now.
-    if sectionKey or entry.hidden then
-        setting.hidden = function()
-            if sectionKey and not SectionShown(registration, sectionKey) then
-                return true
-            end
-            return schema:IsHidden(entry, context)
-        end
+    if entry.hidden then
+        setting.hidden = function() return schema:IsHidden(entry, context) end
     end
 
     if entry.disabled then
@@ -198,27 +160,17 @@ local function ToSetting(registration, entry, sectionKey)
     return setting
 end
 
--- The first section is drawn plain at the top of the dialog rather than behind
--- an expander: turning a frame on and sizing it are what people open this for,
--- and putting them one click away to save a few rows would be a poor trade.
+-- Only the first group is drawn in the dialog itself. Turning a frame on and
+-- sizing it are what people open Edit Mode for, and those belong under your
+-- cursor rather than a click away; everything else is a button that opens the
+-- panel, where there is room to read it.
 local function BuildSettings(registration)
     local settings = {}
 
-    for index, section in ipairs(registration.sections) do
-        local grouped = index > 1 or section.key ~= registration.topSection
-
-        if grouped then
-            settings[#settings + 1] = {
-                kind = ST.Expander,
-                name = section.label,
-                default = false,
-                get = function() return SectionShown(registration, section.key) end,
-                set = function(_, value) SetSection(registration, section.key, value) end,
-            }
-        end
-
-        for _, entry in ipairs(section.entries) do
-            local setting = ToSetting(registration, entry, grouped and section.key or nil)
+    local top = registration.sections[1]
+    if top and top.key == registration.topSection then
+        for _, entry in ipairs(top.entries) do
+            local setting = ToSetting(registration, entry)
             if setting then
                 settings[#settings + 1] = setting
             end
@@ -226,6 +178,24 @@ local function BuildSettings(registration)
     end
 
     return settings
+end
+
+-- One button per remaining group, ahead of whatever buttons the addon adds of
+-- its own. The trailing ellipsis is the only thing distinguishing "opens a
+-- panel" from "does something", since the dialog gives them the same widget.
+local function BuildGroupButtons(registration)
+    local buttons = {}
+
+    for index, section in ipairs(registration.sections) do
+        if index > 1 or section.key ~= registration.topSection then
+            buttons[#buttons + 1] = {
+                text = section.label .. "...",
+                click = function() OpenGroup(registration, section) end,
+            }
+        end
+    end
+
+    return buttons
 end
 
 --------------------------------------------------------------------------------
@@ -241,10 +211,23 @@ local function HookCallbacks()
         for _, registration in ipairs(EditMode.registrations) do
             if registration.onEnter then registration.onEnter(registration.frame) end
         end
+
+        -- Blizzard's system dialog extension is not built until a system is
+        -- selected, which can be well after this, so the styling is re-offered
+        -- rather than assumed. It is idempotent.
+        if PeaversCommons.EditModeStyle then
+            PeaversCommons.EditModeStyle:Apply()
+        end
     end)
 
     LibEditMode:RegisterCallback("exit", function()
         editing = false
+
+        -- The panel hangs off the dialog and has no business outliving it.
+        if PeaversCommons.EditModePanel then
+            PeaversCommons.EditModePanel:Hide()
+        end
+
         for _, registration in ipairs(EditMode.registrations) do
             if registration.onExit then registration.onExit(registration.frame) end
         end
@@ -265,12 +248,11 @@ end
 --   schema             a SettingsSchema
 --   context            passed through to the schema's scope, for per-thing configs
 --   default            { point, x, y } for the Reset Position button
---   topSection         section drawn plain above the expanders (default: the first)
+--   topSection         group drawn in the dialog itself (default: the first)
 --   onPositionChanged  f(frame, point, x, y) - the addon saves and applies
 --   onEnter / onExit   f(frame)
 --   onLayout           f(frame, layoutName, layoutIndex)
---   buttons            list of { text, click }
---   sectionStore       f() -> table, if collapse state should not live on the config
+--   buttons            list of { text, click }, added after the group buttons
 function EditMode.Register(_, spec)
     if not EditMode.available then return nil end
     if not spec or not spec.frame or not spec.schema then return nil end
@@ -282,7 +264,8 @@ function EditMode.Register(_, spec)
         onEnter = spec.onEnter,
         onExit = spec.onExit,
         onLayout = spec.onLayout,
-        sectionStore = spec.sectionStore,
+        name = spec.name,
+        key = tostring(spec.frame),
         sections = spec.schema:SectionsForSurface("editmode"),
     }
     registration.topSection = spec.topSection or (registration.sections[1] and registration.sections[1].key)
@@ -297,8 +280,16 @@ function EditMode.Register(_, spec)
 
     LibEditMode:AddFrameSettings(spec.frame, BuildSettings(registration))
 
-    if spec.buttons and #spec.buttons > 0 then
-        LibEditMode:AddFrameSettingsButtons(spec.frame, spec.buttons)
+    -- The dialog is built by the first AddFrame, so this is the earliest the
+    -- panel can be told what to anchor itself to.
+    registration.dialog = LibEditMode.internal and LibEditMode.internal.dialog
+
+    local buttons = BuildGroupButtons(registration)
+    for _, button in ipairs(spec.buttons or {}) do
+        buttons[#buttons + 1] = button
+    end
+    if #buttons > 0 then
+        LibEditMode:AddFrameSettingsButtons(spec.frame, buttons)
     end
 
     EditMode.registrations[#EditMode.registrations + 1] = registration
@@ -307,6 +298,67 @@ function EditMode.Register(_, spec)
 
     -- After the first registration, because that is what creates the dialog this
     -- squares up.
+    if PeaversCommons.EditModeStyle then
+        PeaversCommons.EditModeStyle:Apply()
+    end
+
+    return registration
+end
+
+--------------------------------------------------------------------------------
+-- Registering against one of Blizzard's own systems
+--
+-- Some addons do not own a frame at all - they reshape one of Blizzard's. The
+-- minimap and the chat frames are already systems in Edit Mode, with their own
+-- position, their own dialog and their own Reset. Registering a second frame
+-- over the top would give the user two things to select for one thing on the
+-- screen.
+--
+-- LibEditMode's answer is an extension: a panel of our settings anchored below
+-- Blizzard's dialog for that system. It takes settings and buttons exactly as a
+-- frame registration does, so a group is still a button that opens the panel,
+-- and nothing about the schema changes.
+--
+-- spec:
+--   systemID     Enum.EditModeSystem value
+--   subSystemID  optional index within that system
+--   name         used in the panel title
+--   schema       a SettingsSchema
+--   context      passed through to the schema
+--   topSection   group shown in the extension itself (default: the first)
+--   buttons      list of { text, click }, added after the group buttons
+function EditMode.RegisterSystem(_, spec)
+    if not EditMode.available then return nil end
+    if not spec or not spec.systemID or not spec.schema then return nil end
+
+    local registration = {
+        schema = spec.schema,
+        context = spec.context,
+        name = spec.name,
+        key = "system:" .. tostring(spec.systemID) .. ":" .. tostring(spec.subSystemID or 0),
+        sections = spec.schema:SectionsForSurface("editmode"),
+        -- Blizzard's dialog for the selected system. Resolved on open, because
+        -- the extension that carries our settings is anchored to it and neither
+        -- exists until something is selected.
+        dialog = function() return _G.EditModeSystemSettingsDialog end,
+    }
+    registration.topSection = spec.topSection
+        or (registration.sections[1] and registration.sections[1].key)
+
+    LibEditMode:AddSystemSettings(spec.systemID, BuildSettings(registration), spec.subSystemID)
+
+    local buttons = BuildGroupButtons(registration)
+    for _, button in ipairs(spec.buttons or {}) do
+        buttons[#buttons + 1] = button
+    end
+    if #buttons > 0 then
+        LibEditMode:AddSystemSettingsButtons(spec.systemID, buttons, spec.subSystemID)
+    end
+
+    EditMode.registrations[#EditMode.registrations + 1] = registration
+
+    HookCallbacks()
+
     if PeaversCommons.EditModeStyle then
         PeaversCommons.EditModeStyle:Apply()
     end
