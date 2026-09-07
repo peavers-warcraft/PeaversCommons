@@ -497,10 +497,83 @@ function ConfigUIUtils.BuildInfoPage(parentFrame, title, blocks)
             y = y - (height + 8)
         elseif block.text then
             Paragraph(block.text, block.color)
+        elseif block.button then
+            local button = W:CreateButton(parentFrame, block.button.text, {
+                variant = block.button.variant or "secondary",
+                width = block.button.width or 220,
+                onClick = block.button.onClick,
+            })
+            button:SetPoint("TOPLEFT", indent, y)
+            y = y - 38
         end
     end
 
     parentFrame:SetHeight(math.abs(y) + 30)
+end
+
+--------------------------------------------------------------------------------
+-- The Edit Mode notice
+--
+-- Every addon in the collection that has moved its settings into Edit Mode says
+-- so on its PeaversConfig page, and they should all say it the same way. The
+-- wording lives here rather than being retyped seven times, so it stays one
+-- sentence rather than seven that drifted.
+--------------------------------------------------------------------------------
+
+StaticPopupDialogs["PEAVERS_RESET_TO_DEFAULT"] = {
+    text = "Reset every %s setting to its default?\n\nThis cannot be undone.",
+    button1 = YES,
+    button2 = NO,
+    OnAccept = function(_, data)
+        if data and data.reset then data.reset() end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+-- opts:
+--   title    what the addon is called, for the reset button and its prompt
+--   select   what to click in Edit Mode, e.g. "the minimap" or "any of the bars"
+--   reset    optional f() - offers a reset button when given
+function ConfigUIUtils.EditModeBlocks(opts)
+    opts = opts or {}
+    local select = opts.select or "the frame"
+
+    local blocks = {
+        { header = "Configuration" },
+        "Everything is configured in Blizzard's Edit Mode.",
+        "Press Escape and choose Edit Mode, then select " .. select ..
+            ". The settings open beside the Edit Mode dialog, grouped into "
+            .. "buttons - one for each part of the addon.",
+    }
+
+    if opts.reset then
+        blocks[#blocks + 1] = {
+            button = {
+                text = "Reset To Default",
+                onClick = function()
+                    StaticPopup_Show("PEAVERS_RESET_TO_DEFAULT", opts.title or "these",
+                        nil, { reset = opts.reset })
+                end,
+            },
+        }
+    end
+
+    return blocks
+end
+
+-- The same page, with the notice appended. Saves every addon doing the same
+-- table concatenation.
+function ConfigUIUtils.BuildInfoPageWithEditMode(parentFrame, title, blocks, editMode)
+    local combined = {}
+    for _, block in ipairs(blocks or {}) do combined[#combined + 1] = block end
+    for _, block in ipairs(ConfigUIUtils.EditModeBlocks(editMode)) do
+        combined[#combined + 1] = block
+    end
+
+    return ConfigUIUtils.BuildInfoPage(parentFrame, title, combined)
 end
 
 return ConfigUIUtils
