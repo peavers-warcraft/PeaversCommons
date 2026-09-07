@@ -54,15 +54,23 @@ local function OpenGroup(registration, section)
     local panel = PeaversCommons.EditModePanel
     if not panel then return end
 
+    -- Systems resolve their dialog when the group is opened rather than at
+    -- registration: Blizzard's own dialog is what they hang off, and which one
+    -- of ours is showing depends on what the user selected.
+    local dialog = registration.dialog
+    if type(dialog) == "function" then
+        dialog = dialog()
+    end
+
     panel:Show({
         -- Keyed by frame as well as group, so clicking "Bars" on one frame and
         -- then on another reopens rather than toggling shut.
-        key = tostring(registration.frame) .. ":" .. section.key,
+        key = registration.key .. ":" .. section.key,
         title = (registration.name or "") .. " - " .. section.label,
         schema = registration.schema,
         context = registration.context,
         entries = section.entries,
-        anchorTo = registration.dialog,
+        anchorTo = dialog,
     })
 end
 
@@ -202,6 +210,13 @@ local function HookCallbacks()
         for _, registration in ipairs(EditMode.registrations) do
             if registration.onEnter then registration.onEnter(registration.frame) end
         end
+
+        -- Blizzard's system dialog extension is not built until a system is
+        -- selected, which can be well after this, so the styling is re-offered
+        -- rather than assumed. It is idempotent.
+        if PeaversCommons.EditModeStyle then
+            PeaversCommons.EditModeStyle:Apply()
+        end
     end)
 
     LibEditMode:RegisterCallback("exit", function()
@@ -249,6 +264,7 @@ function EditMode.Register(_, spec)
         onExit = spec.onExit,
         onLayout = spec.onLayout,
         name = spec.name,
+        key = tostring(spec.frame),
         sections = spec.schema:SectionsForSurface("editmode"),
     }
     registration.topSection = spec.topSection or (registration.sections[1] and registration.sections[1].key)
@@ -281,6 +297,67 @@ function EditMode.Register(_, spec)
 
     -- After the first registration, because that is what creates the dialog this
     -- squares up.
+    if PeaversCommons.EditModeStyle then
+        PeaversCommons.EditModeStyle:Apply()
+    end
+
+    return registration
+end
+
+--------------------------------------------------------------------------------
+-- Registering against one of Blizzard's own systems
+--
+-- Some addons do not own a frame at all - they reshape one of Blizzard's. The
+-- minimap and the chat frames are already systems in Edit Mode, with their own
+-- position, their own dialog and their own Reset. Registering a second frame
+-- over the top would give the user two things to select for one thing on the
+-- screen.
+--
+-- LibEditMode's answer is an extension: a panel of our settings anchored below
+-- Blizzard's dialog for that system. It takes settings and buttons exactly as a
+-- frame registration does, so a group is still a button that opens the panel,
+-- and nothing about the schema changes.
+--
+-- spec:
+--   systemID     Enum.EditModeSystem value
+--   subSystemID  optional index within that system
+--   name         used in the panel title
+--   schema       a SettingsSchema
+--   context      passed through to the schema
+--   topSection   group shown in the extension itself (default: the first)
+--   buttons      list of { text, click }, added after the group buttons
+function EditMode.RegisterSystem(_, spec)
+    if not EditMode.available then return nil end
+    if not spec or not spec.systemID or not spec.schema then return nil end
+
+    local registration = {
+        schema = spec.schema,
+        context = spec.context,
+        name = spec.name,
+        key = "system:" .. tostring(spec.systemID) .. ":" .. tostring(spec.subSystemID or 0),
+        sections = spec.schema:SectionsForSurface("editmode"),
+        -- Blizzard's dialog for the selected system. Resolved on open, because
+        -- the extension that carries our settings is anchored to it and neither
+        -- exists until something is selected.
+        dialog = function() return _G.EditModeSystemSettingsDialog end,
+    }
+    registration.topSection = spec.topSection
+        or (registration.sections[1] and registration.sections[1].key)
+
+    LibEditMode:AddSystemSettings(spec.systemID, BuildSettings(registration), spec.subSystemID)
+
+    local buttons = BuildGroupButtons(registration)
+    for _, button in ipairs(spec.buttons or {}) do
+        buttons[#buttons + 1] = button
+    end
+    if #buttons > 0 then
+        LibEditMode:AddSystemSettingsButtons(spec.systemID, buttons, spec.subSystemID)
+    end
+
+    EditMode.registrations[#EditMode.registrations + 1] = registration
+
+    HookCallbacks()
+
     if PeaversCommons.EditModeStyle then
         PeaversCommons.EditModeStyle:Apply()
     end

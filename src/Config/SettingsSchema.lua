@@ -37,6 +37,13 @@
 --   disabled  optional: f(scope) -> grey this row out
 --   global    optional: this setting is addon-wide, not per-thing - it is read
 --             and written on the config itself, ignoring the scope
+--   getValue  optional: f(config, context) -> value, replacing the key lookup
+--   setValue  optional: f(config, context, value), replacing the key write
+--
+-- getValue/setValue are for settings that are not simply a field: a colour kept
+-- in a nested table per stat, say, or one derived from something else. An entry
+-- using them still needs a key, because that is what identifies it to the
+-- surfaces and to whatever the addon does after a write.
 --
 -- `surface` is the one worth thinking about. "both" is for anything decided by
 -- looking at the frame while you drag it: sizes, spacing, opacity. "config" is
@@ -245,6 +252,10 @@ local function Transform(entry, stored)
 end
 
 function Schema:Read(entry, context)
+    if entry.getValue then
+        return Transform(entry, entry.getValue(self.config, context))
+    end
+
     local stored = self:Scope(context, entry)[entry.key]
 
     if stored == nil then
@@ -261,6 +272,12 @@ function Schema:Read(entry, context)
 end
 
 function Schema:Default(entry, context)
+    -- A setting with its own accessor has no field to read a default from, so
+    -- the entry has to carry one.
+    if entry.getValue then
+        return Transform(entry, entry.default)
+    end
+
     local stored = self:Defaults(context, entry)[entry.key]
     if stored == nil then stored = entry.default end
     if stored == nil then stored = Resolve(entry.fallback) end
@@ -278,7 +295,11 @@ function Schema:Write(entry, context, value)
         stored = entry.write(value, scope[entry.key])
     end
 
-    scope[entry.key] = stored
+    if entry.setValue then
+        entry.setValue(self.config, context, stored)
+    else
+        scope[entry.key] = stored
+    end
 
     if self.config and self.config.Save then
         self.config:Save()

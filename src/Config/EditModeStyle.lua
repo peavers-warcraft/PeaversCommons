@@ -203,14 +203,15 @@ local function Wrap(pool, layout)
     end
 end
 
--- The dialog itself is built once, on the first AddFrame, so its own furniture
--- is squared up directly rather than through a pool.
-local function StyleDialog(internal)
-    local dialog = internal.dialog
-    if not dialog or dialog.peaversStyled then return end
-    dialog.peaversStyled = true
+-- The dialog and the system extension are built once each, so their own
+-- furniture is squared up directly rather than through a pool. They have the
+-- same shape - a settings column with a reset button in it, and a button block
+-- below - so one pass does both.
+local function StyleContainer(frame)
+    if not frame or frame.peaversStyled then return end
+    frame.peaversStyled = true
 
-    local settings = dialog.Settings
+    local settings = frame.Settings
     if settings then
         settings.spacing = ROW_SPACING
         if settings.Divider then
@@ -223,9 +224,18 @@ local function StyleDialog(internal)
         end
     end
 
-    if dialog.Buttons then
-        dialog.Buttons.spacing = ROW_SPACING
+    if frame.Buttons then
+        frame.Buttons.spacing = ROW_SPACING
     end
+end
+
+local function StyleDialog(internal)
+    StyleContainer(internal.dialog)
+
+    -- The extension is not built until a Blizzard system is selected, which can
+    -- be long after any of our frames registered. Apply is offered again on
+    -- entering Edit Mode, and this picks it up whenever it appears.
+    StyleContainer(internal.extension)
 end
 
 -- Called once, after the frames have been registered - registration is what
