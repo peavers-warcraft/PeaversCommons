@@ -22,6 +22,7 @@ Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\AceDB-3.0\AceDB-3.0.lua
 Libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
+Libs\LibEditMode\embed.xml
 
 src\Core\Core.lua
 src\Core\Config.lua
@@ -45,10 +46,13 @@ src\Core\Promoter.lua
 
 src\Config\DefaultConfig.lua
 src\Config\ConfigSchema.lua
+src\Config\SettingsSchema.lua
 src\Config\ConfigControls.lua
 src\Config\SettingsPanels.lua
 src\Config\SettingsObjects.lua
 src\Config\ConfigMigration.lua
+src\Config\EditModeStyle.lua
+src\Core\EditMode.lua
 
 src\Utils\Utils.lua
 
