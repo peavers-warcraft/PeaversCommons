@@ -541,13 +541,67 @@ function W.CreateDropdown(_, parent, labelText, opts)
     menuFrame:SetPoint("TOPRIGHT", btn, "BOTTOMRIGHT", 0, -2)
     menuFrame:Hide()
 
+    -- A dropdown of collected addon buttons is as long as the number of addons
+    -- installed, and a font list is longer still. Past this the menu scrolls
+    -- rather than growing off the bottom of the screen.
+    local MAX_MENU_HEIGHT = opts.maxMenuHeight or 300
+    local ITEM_HEIGHT = 24
+
+    if menuFrame.SetClipsChildren then
+        menuFrame:SetClipsChildren(true)
+    end
+
+    -- The items live on their own frame so scrolling is one anchor change
+    -- rather than repositioning every row.
+    local menuContent = CreateFrame("Frame", nil, menuFrame)
+    menuContent:SetPoint("TOPLEFT")
+    menuContent:SetPoint("TOPRIGHT")
+    menuContent:SetHeight(1)
+
+    -- Without something to see, a menu that scrolls looks exactly like a menu
+    -- that has been cut off.
+    local thumb = menuFrame:CreateTexture(nil, "OVERLAY")
+    thumb:SetWidth(3)
+    thumb:SetColorTexture(C.textMuted[1], C.textMuted[2], C.textMuted[3], 0.5)
+    thumb:Hide()
+
+    local scrollOffset, maxScroll = 0, 0
+
+    local function ApplyScroll()
+        menuContent:ClearAllPoints()
+        menuContent:SetPoint("TOPLEFT", 0, scrollOffset)
+        menuContent:SetPoint("TOPRIGHT", 0, scrollOffset)
+
+        if maxScroll <= 0 then
+            thumb:Hide()
+            return
+        end
+
+        local track = menuFrame:GetHeight() - 4
+        local visible = track / (track + maxScroll)
+        local height = math.max(16, track * visible)
+        thumb:SetHeight(height)
+        thumb:ClearAllPoints()
+        thumb:SetPoint("TOPRIGHT", menuFrame, "TOPRIGHT", -2,
+            -2 - ((track - height) * (scrollOffset / maxScroll)))
+        thumb:Show()
+    end
+
+    menuFrame:EnableMouseWheel(true)
+    menuFrame:SetScript("OnMouseWheel", function(_, delta)
+        if maxScroll <= 0 then return end
+        -- Positive Y is up, so scrolling down moves the content up.
+        scrollOffset = math.max(0, math.min(maxScroll, scrollOffset - (delta * ITEM_HEIGHT)))
+        ApplyScroll()
+    end)
+
     local menuButtons = {}
 
     local function BuildMenu()
         for _, mb in ipairs(menuButtons) do mb:Hide() end
         menuButtons = {}
 
-        local itemHeight = 24
+        local itemHeight = ITEM_HEIGHT
         local yOff = -2
         for _, opt in ipairs(options) do
             local value, display
@@ -559,7 +613,7 @@ function W.CreateDropdown(_, parent, labelText, opts)
                 display = tostring(opt)
             end
 
-            local item = CreateFrame("Button", nil, menuFrame)
+            local item = CreateFrame("Button", nil, menuContent)
             item:SetPoint("TOPLEFT", 2, yOff)
             item:SetPoint("TOPRIGHT", -2, yOff)
             item:SetHeight(itemHeight)
@@ -586,7 +640,15 @@ function W.CreateDropdown(_, parent, labelText, opts)
             yOff = yOff - itemHeight
         end
 
-        menuFrame:SetHeight(math.abs(yOff) + 4)
+        local contentHeight = math.abs(yOff) + 4
+        menuContent:SetHeight(contentHeight)
+
+        menuFrame:SetHeight(math.min(contentHeight, MAX_MENU_HEIGHT))
+        maxScroll = math.max(0, contentHeight - menuFrame:GetHeight())
+
+        -- Opening the menu starts at the top rather than wherever it was left.
+        scrollOffset = 0
+        ApplyScroll()
     end
 
     btn:SetScript("OnClick", function()

@@ -33,8 +33,8 @@
 --   desc      a sentence for the tooltip
 --   read      optional: stored value -> what the widget shows
 --   write     optional: what the widget gives -> stored value
---   hidden    optional: f(scope) -> hide this row entirely
---   disabled  optional: f(scope) -> grey this row out
+--   hidden    optional: f(scope, context) -> hide this row entirely
+--   disabled  optional: f(scope, context) -> grey this row out
 --   global    optional: this setting is addon-wide, not per-thing - it is read
 --             and written on the config itself, ignoring the scope
 --   getValue  optional: f(config, context) -> value, replacing the key lookup
@@ -312,12 +312,12 @@ end
 
 function Schema:IsHidden(entry, context)
     if not entry.hidden then return false end
-    return entry.hidden(self:Scope(context, entry)) and true or false
+    return entry.hidden(self:Scope(context, entry), context) and true or false
 end
 
 function Schema:IsDisabled(entry, context)
     if not entry.disabled then return false end
-    return entry.disabled(self:Scope(context, entry)) and true or false
+    return entry.disabled(self:Scope(context, entry), context) and true or false
 end
 
 --------------------------------------------------------------------------------
