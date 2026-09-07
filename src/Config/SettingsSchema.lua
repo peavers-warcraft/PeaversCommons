@@ -209,7 +209,12 @@ function Schema:Fill(entry)
     filled.label = filled.label or entry.key
     filled.unit = filled.unit or COMMON_UNITS[entry.key]
 
-    if entry.key == "fontOutline" and not filled.read and not filled.write then
+    -- Most of the collection stores the outline as a tick and wants the
+    -- string/boolean handling below. PeaversChat stores one of three values and
+    -- draws a dropdown for it, so the transform is applied only where the widget
+    -- is actually a checkbox - otherwise "NONE" comes back as false.
+    if entry.key == "fontOutline" and filled.kind == "checkbox"
+        and not filled.read and not filled.write then
         filled.read = OUTLINE_TRANSFORM.read
         filled.outlineWrite = true
     end
