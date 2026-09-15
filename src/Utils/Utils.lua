@@ -72,10 +72,13 @@ function Utils.GetPlayerInfo()
     local class, classFilename, classID = UnitClass("player")
     local level = UnitLevel("player")
     
-    local specIndex = GetSpecialization()
+    -- nil on a client without specializations, which callers already handle for
+    -- a character too low level to have one.
+    local Compat = PeaversCommons.Compat
+    local specIndex = Compat.GetSpecialization()
     local specID, specName
     if specIndex then
-        specID, specName = GetSpecializationInfo(specIndex)
+        specID, specName = Compat.GetSpecializationInfo(specIndex)
     end
     
     return {

@@ -18,11 +18,11 @@ local function OpenAddonSettings(addonName)
         -- Method 2: Use the Config.OpenOptionsCommand() function
         addon.Config.OpenOptionsCommand()
         return true
-    elseif addon.directSettingsCategory then
+    elseif addon.directSettingsCategory and Settings and Settings.OpenToCategory then
         -- Method 3: Use direct category reference
         Settings.OpenToCategory(addon.directSettingsCategory)
         return true
-    else
+    elseif SettingsPanel and SettingsPanel.Open then
         -- Fallback: Open Settings panel to Addons tab
         SettingsPanel:Open()
         if SettingsPanel.AddOnsTab and SettingsPanel.AddOnsTab.Click then
@@ -30,6 +30,7 @@ local function OpenAddonSettings(addonName)
         end
         return true
     end
+    return false
 end
 
 function SlashCommands:Register(addonName, commandPrefix, handlers)
