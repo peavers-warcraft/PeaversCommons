@@ -6,10 +6,24 @@ local eventFrame = CreateFrame("Frame")
 local registeredEvents = {}
 local eventHandlers = {}
 
+-- Events this client does not have, by name. Registering one is a hard Lua
+-- error, raised wherever the registration sits - which is usually halfway through
+-- an addon's initialisation, taking everything after it down too. The collection
+-- runs on retail and the Classic clients alike, so an event that only exists on
+-- one of them is skipped here and remembered, rather than trusted to every caller.
+local unknownEvents = {}
+
+--- @return boolean registered  false when this client has no such event
 function Events:RegisterEvent(event, handler)
+    if unknownEvents[event] then return false end
+
     if not registeredEvents[event] then
+        local ok = pcall(eventFrame.RegisterEvent, eventFrame, event)
+        if not ok then
+            unknownEvents[event] = true
+            return false
+        end
         registeredEvents[event] = true
-        eventFrame:RegisterEvent(event)
     end
     
     if handler then

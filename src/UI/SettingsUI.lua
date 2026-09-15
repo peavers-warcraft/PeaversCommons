@@ -110,8 +110,8 @@ function SettingsUI:CreateSettingsPages(addonRef, addonName, addonTitle, addonDe
         end
     end
 
-    -- Register with the Settings API
-    if Settings then
+    -- Register with the Settings API, when this client has all of it
+    if PeaversCommons.Compat.hasSettingsPanel and Settings.RegisterCanvasLayoutSubcategory then
         -- Register main category
         local category = Settings.RegisterCanvasLayoutCategory(mainPanel, mainPanel.name)
 

@@ -836,11 +836,11 @@ function ConfigManager.NewCharacterSpecBased(cls, addon, defaultSettings, option
     config.specIDs = {}
 
     function config:GetSpecialization()
-        local currentSpec = GetSpecialization()
+        local currentSpec = PeaversCommons.Compat.GetSpecialization()
         if not currentSpec then
             return nil
         end
-        local specID = GetSpecializationInfo(currentSpec)
+        local specID = PeaversCommons.Compat.GetSpecializationInfo(currentSpec)
         return specID
     end
 
@@ -1266,8 +1266,17 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
     function config:SetupSpecSwitching()
         if self.specFrame then return end
 
+        -- No specializations on this client: the profile stays per character,
+        -- which is what a spec profile is on a character with only one.
+        if not PeaversCommons.Compat.hasSpecializations then return end
+
         self.specFrame = CreateFrame("Frame")
-        self.specFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+        if PeaversCommons.Compat.IsEventValid("PLAYER_SPECIALIZATION_CHANGED") then
+            self.specFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+        end
+        if PeaversCommons.Compat.IsEventValid("ACTIVE_TALENT_GROUP_CHANGED") then
+            self.specFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+        end
         self.specFrame:SetScript("OnEvent", function(_, event, unit)
             if unit == "player" or not unit then
                 self:OnSpecChanged()
@@ -1283,10 +1292,10 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
     function config:OnSpecChanged()
         if not self.db then return false end
 
-        local specIndex = GetSpecialization()
+        local specIndex = PeaversCommons.Compat.GetSpecialization()
         if not specIndex then return false end
 
-        local specID, specName = GetSpecializationInfo(specIndex)
+        local specID, specName = PeaversCommons.Compat.GetSpecializationInfo(specIndex)
         if not specID or not specName then return false end
 
         local charName = UnitName("player")
@@ -1318,9 +1327,9 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
     end
 
     function config:GetSpecProfileName()
-        local specIndex = GetSpecialization()
+        local specIndex = PeaversCommons.Compat.GetSpecialization()
         if not specIndex then return nil end
-        local _, specName = GetSpecializationInfo(specIndex)
+        local _, specName = PeaversCommons.Compat.GetSpecializationInfo(specIndex)
         if not specName then return nil end
         local charName = UnitName("player")
         local realm = GetRealmName()

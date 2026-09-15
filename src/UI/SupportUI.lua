@@ -234,11 +234,19 @@ function SupportUI:GetRegisteredAddons()
     return registeredAddons
 end
 
-function SupportUI:DirectRegisterAddon(addon)
-    if not addon or not addon.name then return false end
+-- The Settings API can arrive a moment after login, so registration retries - but
+-- not forever. On a client that never has it, an uncapped retry is a timer firing
+-- every second for the rest of the session.
+local MAX_REGISTER_ATTEMPTS = 30
 
-    if not Settings then
-        C_Timer.After(1, function() self:DirectRegisterAddon(addon) end)
+function SupportUI:DirectRegisterAddon(addon, attempt)
+    if not addon or not addon.name then return false end
+    attempt = attempt or 1
+
+    if not Settings or not Settings.RegisterCanvasLayoutCategory or not Settings.RegisterAddOnCategory then
+        if attempt < MAX_REGISTER_ATTEMPTS then
+            C_Timer.After(1, function() self:DirectRegisterAddon(addon, attempt + 1) end)
+        end
         return false
     end
 
@@ -248,11 +256,6 @@ function SupportUI:DirectRegisterAddon(addon)
     panel.OnRefresh = function() end
     panel.OnCommit = function() end
     panel.OnDefault = function() end
-
-    if not Settings.RegisterCanvasLayoutCategory or not Settings.RegisterAddOnCategory then
-        C_Timer.After(1, function() self:DirectRegisterAddon(addon) end)
-        return false
-    end
 
     local category = Settings.RegisterCanvasLayoutCategory(panel, addon.name)
     if not category then

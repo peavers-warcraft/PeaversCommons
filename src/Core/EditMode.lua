@@ -30,7 +30,12 @@ PeaversCommons.EditMode = EditMode
 
 local LibEditMode = LibStub and LibStub("LibEditMode", true)
 
-EditMode.available = LibEditMode and true or false
+-- Available means the library finished loading, not merely that it exists: a
+-- library that registered its name and then failed partway through has no
+-- AddFrame, and every addon checking this flag would call straight into the gap.
+EditMode.available = LibEditMode ~= nil
+    and type(LibEditMode.AddFrame) == "function"
+    and LibEditMode.SettingType ~= nil
 EditMode.registrations = {}
 
 local editing = false

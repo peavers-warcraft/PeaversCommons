@@ -1,4 +1,4 @@
-## Interface: 120001, 120005, 120007, 120100
+## Interface: 11509, 20506, 50504, 120001, 120005, 120007, 120100
 
 ## Title: |cff3abdf7Peavers|rCommons
 ## Notes: Common functionality for Peavers addons
@@ -25,6 +25,7 @@ Libs\AceDBOptions-3.0\AceDBOptions-3.0.lua
 Libs\LibEditMode\embed.xml
 
 src\Core\Core.lua
+src\Core\Compat.lua
 src\Core\Config.lua
 src\Core\Events.lua
 src\Core\SlashCommands.lua

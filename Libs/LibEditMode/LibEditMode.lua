@@ -1,5 +1,15 @@
 local MINOR = 15
 
+-- PeaversCommons patch: build the library only on a client that has Edit Mode.
+-- Everything below hooks Edit Mode frames at load, so on a client without them it
+-- would register its name and then fail halfway, leaving a library that looks
+-- present and is not. The other files in this folder are patched to skip when
+-- the library is absent. Reapply both when updating LibEditMode.
+if not (EditModeManagerFrame and EditModeSystemSettingsDialog and C_EditMode
+    and Enum and Enum.EditModeSettingDisplayType) then
+	return
+end
+
 local _, ns = ...
 local lib
 if ns.LibEditMode then
@@ -317,7 +327,9 @@ do -- deal with hooks and events
 		end
 	end)
 
-	EventRegistry:RegisterFrameEventAndCallback('PLAYER_SPECIALIZATION_CHANGED', function(...)
+	-- PeaversCommons patch: a client with Edit Mode but no specializations has no
+	-- such event, and registering it there is a hard error.
+	pcall(EventRegistry.RegisterFrameEventAndCallback, EventRegistry, 'PLAYER_SPECIALIZATION_CHANGED', function(...)
 		if lib.hookVersion == MINOR then
 			onSpecChanged(...)
 		end

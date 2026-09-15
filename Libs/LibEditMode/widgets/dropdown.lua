@@ -4,8 +4,8 @@ if ns.LibEditMode then
 	lib = ns.LibEditMode
 else
 	local MINOR, prevMinor = 15
-	lib, prevMinor = LibStub('LibEditMode')
-	if prevMinor > MINOR then
+	lib, prevMinor = LibStub('LibEditMode', true)
+	if not lib or prevMinor > MINOR then
 		return
 	end
 end
