@@ -3,12 +3,45 @@ local W = {}
 PeaversCommons.Widgets = W
 
 local Theme = PeaversCommons.Theme
+local Style = PeaversCommons.Style
 
 -- Alias, not a copy: consumers capture `local C = W.Colors` at load time and hold a
 -- reference to this exact table. See the table-identity note in Theme.lua.
 W.Colors = Theme.Colors
 
 local C = W.Colors
+
+--------------------------------------------------------------------------------
+-- The (frame, nextY) contract
+--
+-- CreateSectionHeader and CreateSeparator have always taken an x/y and handed
+-- back where the next thing goes. The other factories did not, so every caller
+-- had to know how tall the control it just made was - and a survey of the
+-- thirteen addons that lay out pages by hand found the same 22px checkbox
+-- advanced past by SEVEN different numbers, with gaps from +4 to +18. Nobody was
+-- doing it wrong; there was no right way to write it.
+--
+-- So every factory now accepts an optional `opts.x`/`opts.y`, anchors itself when
+-- given one, and returns `(frame, nextY)`. Callers that pass no y get nil as the
+-- second value and carry on exactly as before - this is additive, and the
+-- existing hundred-odd call sites keep working untouched.
+--
+-- Once a caller has adopted it, the control's height stops being its business,
+-- which is what makes the metrics safe to change afterwards.
+--------------------------------------------------------------------------------
+
+-- The air under a control before the next one starts. One number, so a page
+-- built from these has one rhythm rather than each call site inventing its own.
+local GAP = 8
+
+--- Anchor a freshly built widget if the caller gave a position, and work out
+--- where the next one goes.
+--- @return Frame frame, number|nil nextY
+local function Place(frame, opts, height)
+    if not opts or opts.y == nil then return frame, nil end
+    frame:SetPoint("TOPLEFT", opts.x or 0, opts.y)
+    return frame, opts.y - height - (opts.gap or GAP)
+end
 
 local FLAT_BACKDROP = {
     bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -62,26 +95,33 @@ function W:CreateSectionHeader(parent, text, x, y, opts)
         container:SetHeight(22)
     end
 
-    -- Tracked, uppercase, mono — the site's eyebrow. Falls back to a plain
-    -- FontString when the bundled font is unavailable (non-Latin locale, or the
-    -- client has not been restarted since the font was added).
+    -- Tracked, uppercase, mono - the eyebrow, kept because the letter-spacing is
+    -- genuinely nicer than a plain label and costs nothing on a string this
+    -- short. Falls back to a plain FontString when the bundled font is
+    -- unavailable (non-Latin locale, or the client has not been restarted since
+    -- the font was added).
+    --
+    -- White at the muted alpha rather than indigo. A heading that reads the same
+    -- on every page is not state, and spending the accent on all thirty-nine of
+    -- them is what stops it meaning anything on the one row you have selected.
+    local HEADING = { 1, 1, 1 }
     local label
     if Theme.UsesCustomFonts() then
-        label = Theme.TrackedLabel(container, text, 10, C.eyebrow)
+        label = Theme.TrackedLabel(container, text, Style.Size.section,
+            { HEADING[1], HEADING[2], HEADING[3], Style.Alpha.muted })
         label:SetPoint("BOTTOMLEFT", 0, 4)
     else
         label = container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         label:SetPoint("BOTTOMLEFT", 0, 4)
         label:SetText(tostring(text):upper())
-        label:SetTextColor(unpack(C.eyebrow))
-        label:SetFont(label:GetFont() --[[@as string]], 10, "")
+        Style.Text(label, Style.Size.section, Style.Alpha.muted)
     end
 
-    local line = container:CreateTexture(nil, "ARTWORK")
+    -- The rule belongs to the content below rather than the heading above, and
+    -- sits at the section weight: barely there, enough to group.
+    local line = Style.Hairline(container, Style.Rule.section)
     line:SetPoint("BOTTOMLEFT", 0, 0)
     line:SetPoint("BOTTOMRIGHT", 0, 0)
-    line:SetHeight(1)
-    line:SetColorTexture(C.border[1], C.border[2], C.border[3], 1)
 
     container.label = label
     return container, y - 24
@@ -91,10 +131,14 @@ function W.CreateCollapsibleSection(_, parent, title, opts)
     opts = opts or {}
     local defaultOpen = opts.defaultOpen ~= false
 
-    local frame = CreateFrame("Frame", opts.name, parent, "BackdropTemplate")
-    frame:SetBackdrop(FLAT_BACKDROP)
-    frame:SetBackdropColor(unpack(C.bgPanel))
-    frame:SetBackdropBorderColor(unpack(C.border))
+    local frame = CreateFrame("Frame", opts.name, parent)
+
+    local panelFill = frame:CreateTexture(nil, "BACKGROUND")
+    panelFill:SetAllPoints()
+    panelFill:SetColorTexture(C.bgPanel[1], C.bgPanel[2], C.bgPanel[3], C.bgPanel[4] or 1)
+
+    local panelBorder = Style.Border(frame)
+    panelBorder:SetColor(1, 1, 1, Style.Rule.chrome)
 
     local header = CreateFrame("Button", nil, frame)
     header:SetPoint("TOPLEFT", 0, 0)
@@ -107,22 +151,20 @@ function W.CreateCollapsibleSection(_, parent, title, opts)
 
     local arrow = header:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     arrow:SetPoint("LEFT", 10, 0)
-    arrow:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    Style.Text(arrow, Style.Size.value, Style.Alpha.muted)
 
     local titleText = header:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     titleText:SetPoint("LEFT", arrow, "RIGHT", 6, 0)
     titleText:SetText(title)
-    titleText:SetTextColor(unpack(C.text))
+    Style.Text(titleText, Style.Size.label, Style.Alpha.primary)
 
     local content = CreateFrame("Frame", nil, frame)
     content:SetPoint("TOPLEFT", 0, -32)
     content:SetPoint("TOPRIGHT", 0, -32)
 
-    local divider = frame:CreateTexture(nil, "ARTWORK")
+    local divider = Style.Hairline(frame, Style.Rule.divider)
     divider:SetPoint("TOPLEFT", 0, -32)
     divider:SetPoint("TOPRIGHT", 0, -32)
-    divider:SetHeight(1)
-    divider:SetColorTexture(C.border[1], C.border[2], C.border[3], 1)
 
     local isOpen = defaultOpen
 
@@ -143,11 +185,14 @@ function W.CreateCollapsibleSection(_, parent, title, opts)
         if opts.onToggle then opts.onToggle(isOpen) end
     end)
 
+    -- Hover is alpha, and leaving restores nothing rather than painting the
+    -- header a different colour than it started - which is what it did before,
+    -- so a section you had once hovered stayed visibly darker than its siblings.
     header:SetScript("OnEnter", function()
-        headerBg:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], 0.08)
+        headerBg:SetColorTexture(1, 1, 1, Style.Row.hover)
     end)
     header:SetScript("OnLeave", function()
-        headerBg:SetColorTexture(C.bgNested[1], C.bgNested[2], C.bgNested[3], 1)
+        headerBg:SetColorTexture(0, 0, 0, 0)
     end)
 
     UpdateState()
@@ -162,16 +207,19 @@ function W.CreateCollapsibleSection(_, parent, title, opts)
     return frame
 end
 
-local TRANSPARENT = { 0, 0, 0, 0 }
-
 --- Create a themed button.
---- Tiers follow peavers.io: `primary` is a near-white fill with dark text (the sole
---- high-contrast element in the design), `secondary` is a hairline outline that
---- brightens its *border* on hover, and `ghost` is text-only. `danger` is an
---- extension — the site has no destructive action.
+---
+--- Every variant shares one solid dark fill and differs only in the colour and
+--- alpha of its outline and label: `primary` wears the accent, `secondary` white,
+--- `danger` red, and `ghost` drops the fill and border entirely to become a text
+--- link. Nothing is filled with the accent - a block of colour in a dense
+--- settings window reads as a warning rather than as the way forward.
+---
+--- Pass `opts.y` (and optionally `opts.x`) to have the button anchor itself and
+--- hand back where the next control goes; see the (frame, nextY) note above.
 --- @param parent Frame
 --- @param text string
---- @param opts? table { variant|style, width, height, onClick, name }
+--- @param opts? table { variant|style, width, height, onClick, name, x, y, gap }
 function W.CreateButton(_, parent, text, opts)
     opts = opts or {}
     -- `style` is accepted as an alias for `variant`: several addons pass it, and
@@ -180,58 +228,60 @@ function W.CreateButton(_, parent, text, opts)
     local width = opts.width or 120
     local height = opts.height or 26
 
-    local btn = CreateFrame("Button", opts.name, parent, "BackdropTemplate")
+    local btn = CreateFrame("Button", opts.name, parent)
     btn:SetSize(width, height)
-    btn:SetBackdrop(FLAT_BACKDROP)
+
+    -- One solid dark fill on every variant, in every state. A translucent fill
+    -- lets the window through and the button reads as an outline drawn onto the
+    -- background rather than an object sitting on top of it.
+    local fill = btn:CreateTexture(nil, "BACKGROUND")
+    fill:SetAllPoints()
+    fill:SetColorTexture(0.06, 0.08, 0.10, 0.92)
+
+    -- Four unsnapped textures rather than a backdrop edge: a nominal one-pixel
+    -- edgeSize is multiplied by the frame's effective scale, so at a fractional
+    -- scale it rounds up along the bottom and right and down along the top and
+    -- left. See Style.Border.
+    local border = Style.Border(btn)
 
     local label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("CENTER", 0, 0)
     label:SetText(text)
+    -- Set once here rather than through Style.Text on every hover: only the
+    -- colour moves between states, and re-applying a font is work for nothing.
+    label:SetFont(Style.Face(), Style.Size.label, "")
 
-    -- bg/hover are fills; border/borderHover are the hairline. Keeping them
-    -- separate is what lets secondary and ghost hover without a fill change.
-    local colors = {
-        -- Solid indigo rather than the site's near-white pill. On peavers.io the
-        -- white pill is a single hero CTA surrounded by whitespace; in a dense
-        -- settings window it reads as a glaring block next to its neighbours.
-        -- Indigo keeps the "this is the primary action" weight and stays on brand
-        -- with the eyebrows and active dots.
-        primary = {
-            bg = C.accent, hover = C.accentHover,
-            border = C.accent, borderHover = C.accentHover,
-            text = { 1, 1, 1 }, textHover = { 1, 1, 1 },
-        },
-        secondary = {
-            bg = TRANSPARENT, hover = TRANSPARENT,
-            border = C.border, borderHover = C.textMuted,
-            text = C.text, textHover = C.text,
-        },
-        ghost = {
-            bg = TRANSPARENT, hover = TRANSPARENT,
-            border = TRANSPARENT, borderHover = TRANSPARENT,
-            text = C.textSec, textHover = C.text,
-        },
-        danger = {
-            bg = TRANSPARENT, hover = { C.danger[1], C.danger[2], C.danger[3], 0.10 },
-            border = { C.danger[1], C.danger[2], C.danger[3], 0.50 }, borderHover = C.danger,
-            text = C.danger, textHover = C.danger,
-        },
+    -- Emphasis is the accent on the outline and the label, never as a fill.
+    -- The previous primary was a solid indigo block, on the reasoning that a
+    -- white pill reads as glaring in a dense window - which is true, and the
+    -- answer is not to fill it with a different colour but not to fill it at
+    -- all. Both variants share one background, so the eye separates them by
+    -- colour and alpha alone, and only the border and text move on hover.
+    local variants = {
+        primary   = { color = C.accent,    border = 0.90, borderHover = 1.00, alpha = 0.90, hover = 1.00 },
+        secondary = { color = { 1, 1, 1 }, border = 0.35, borderHover = 0.60, alpha = 0.55, hover = 1.00 },
+        ghost     = { color = { 1, 1, 1 },                                    alpha = 0.50, hover = 1.00 },
+        danger    = { color = C.danger,    border = 0.55, borderHover = 1.00, alpha = 0.75, hover = 1.00 },
     }
 
-    local c = colors[variant] or colors.secondary
+    local c = variants[variant] or variants.secondary
 
-    local function SetNormal()
-        btn:SetBackdropColor(unpack(c.bg))
-        btn:SetBackdropBorderColor(unpack(c.border))
-        label:SetTextColor(c.text[1], c.text[2], c.text[3])
+    -- Ghost is a text link: no fill and no border at all, which is what marks it
+    -- as the quiet way out rather than a third competing button.
+    if not c.border then
+        fill:Hide()
+        border:SetShown(false)
     end
 
-    btn:SetScript("OnEnter", function()
-        btn:SetBackdropColor(unpack(c.hover))
-        btn:SetBackdropBorderColor(unpack(c.borderHover))
-        label:SetTextColor(c.textHover[1], c.textHover[2], c.textHover[3])
-    end)
-    btn:SetScript("OnLeave", SetNormal)
+    local function Paint(textAlpha, borderAlpha)
+        label:SetTextColor(c.color[1], c.color[2], c.color[3], textAlpha)
+        if c.border then
+            border:SetColor(c.color[1], c.color[2], c.color[3], borderAlpha)
+        end
+    end
+
+    btn:SetScript("OnEnter", function() Paint(c.hover, c.borderHover) end)
+    btn:SetScript("OnLeave", function() Paint(c.alpha, c.border) end)
     btn:SetScript("OnMouseDown", function() label:SetPoint("CENTER", 0, -1) end)
     btn:SetScript("OnMouseUp", function() label:SetPoint("CENTER", 0, 0) end)
 
@@ -239,12 +289,12 @@ function W.CreateButton(_, parent, text, opts)
         btn:SetScript("OnClick", opts.onClick)
     end
 
-    SetNormal()
+    Paint(c.alpha, c.border)
 
     btn.label = label
     btn.SetLabel = function(self, newText) label:SetText(newText) end
 
-    return btn
+    return Place(btn, opts, height)
 end
 
 function W.CreateCheckbox(_, parent, labelText, opts)
@@ -285,14 +335,18 @@ function W.CreateCheckbox(_, parent, labelText, opts)
     local label = btn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     label:SetPoint("LEFT", box, "RIGHT", 8, 0)
     label:SetText(labelText)
-    label:SetTextColor(unpack(C.text))
+    Style.Text(label, Style.Size.label, Style.Alpha.primary)
 
+    local height = 22
     if opts.description then
         local desc = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
         desc:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
         desc:SetText(opts.description)
-        desc:SetTextColor(unpack(C.textMuted))
-        frame:SetHeight(36)
+        -- The description is the same sentence one step quieter, by alpha
+        -- rather than by a second colour.
+        Style.Text(desc, Style.Size.value, Style.Alpha.muted)
+        height = 36
+        frame:SetHeight(height)
     end
 
     local checked = opts.checked or false
@@ -331,14 +385,8 @@ function W.CreateCheckbox(_, parent, labelText, opts)
         end
     end
 
-    btn:SetScript("OnEnter", function()
-        SetEdge(C.borderHover)
-        label:SetTextColor(unpack(C.text))
-    end)
-    btn:SetScript("OnLeave", function()
-        SetEdge(C.border)
-        label:SetTextColor(unpack(C.text))
-    end)
+    btn:SetScript("OnEnter", function() SetEdge(C.borderHover) end)
+    btn:SetScript("OnLeave", function() SetEdge(C.border) end)
 
     UpdateState()
 
@@ -348,7 +396,7 @@ function W.CreateCheckbox(_, parent, labelText, opts)
     frame.__isPeaversCheckbox = true
     frame.__onChange = function() if opts.onChange then opts.onChange(checked) end end
 
-    return frame
+    return Place(frame, opts, height)
 end
 
 -- Deprecated: the switch-style toggle was retired in favour of the checkbox
@@ -378,7 +426,9 @@ function W.CreateSlider(_, parent, labelText, opts)
 
     local valueText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
     valueText:SetPoint("TOPRIGHT", 0, 0)
-    valueText:SetTextColor(unpack(C.accent))
+    -- A readout, not a state: the accent stays on the fill and the thumb, which
+    -- are what actually show the value.
+    Style.Text(valueText, Style.Size.value, Style.Alpha.secondary)
 
     local function FormatValue(v)
         if opts.format then return opts.format(v) end
@@ -415,9 +465,14 @@ function W.CreateSlider(_, parent, labelText, opts)
     slider:SetHeight(TRACK_H)
     slider:SetOrientation("HORIZONTAL")
     slider:EnableMouse(true)
-    slider:SetBackdrop(FLAT_BACKDROP)
-    slider:SetBackdropColor(unpack(C.bgNested))
-    slider:SetBackdropBorderColor(unpack(C.border))
+    -- Track fill as a texture with an unsnapped border, rather than a backdrop
+    -- edge: on a track only six pixels tall, an edge that rounds to two on one
+    -- side and one on the other is the whole control looking crooked.
+    local trackFill = slider:CreateTexture(nil, "BACKGROUND")
+    trackFill:SetAllPoints()
+    trackFill:SetColorTexture(C.bgNested[1], C.bgNested[2], C.bgNested[3], 1)
+    local trackBorder = Style.Border(slider)
+    trackBorder:SetColor(1, 1, 1, Style.Rule.divider)
     slider:SetMinMaxValues(min, max)
     slider:SetValueStep(step)
     slider:SetObeyStepOnDrag(true)
@@ -429,7 +484,10 @@ function W.CreateSlider(_, parent, labelText, opts)
 
     slider:SetValue(value)
 
-    local fill = slider:CreateTexture(nil, "BORDER")
+    -- ARTWORK, not BORDER: the track's own outline is four textures on the
+    -- BORDER layer now, and two things on one layer in the same place have no
+    -- defined order between them. The progress fill belongs above both.
+    local fill = slider:CreateTexture(nil, "ARTWORK")
     fill:SetPoint("TOPLEFT", 1, -1)
     fill:SetPoint("BOTTOMLEFT", 1, 1)
     fill:SetTexture("Interface\\Buttons\\WHITE8x8")
@@ -467,11 +525,11 @@ function W.CreateSlider(_, parent, labelText, opts)
     end)
 
     slider:SetScript("OnEnter", function()
-        slider:SetBackdropBorderColor(unpack(C.borderHover))
+        trackBorder:SetColor(1, 1, 1, Style.Rule.chrome)
         thumbTex:SetVertexColor(C.accentHover[1], C.accentHover[2], C.accentHover[3])
     end)
     slider:SetScript("OnLeave", function()
-        slider:SetBackdropBorderColor(unpack(C.border))
+        trackBorder:SetColor(1, 1, 1, Style.Rule.divider)
         thumbTex:SetVertexColor(C.accent[1], C.accent[2], C.accent[3])
     end)
 
@@ -484,7 +542,7 @@ function W.CreateSlider(_, parent, labelText, opts)
     frame.SetValue = function(self, v) slider:SetValue(v) end
     frame.GetValue = function(self) return slider:GetValue() end
 
-    return frame
+    return Place(frame, opts, 44)
 end
 
 function W.CreateDropdown(_, parent, labelText, opts)
@@ -627,7 +685,10 @@ function W.CreateDropdown(_, parent, labelText, opts)
             itemLabel:SetText(display)
             itemLabel:SetTextColor(value == selected and C.accent[1] or C.text[1], value == selected and C.accent[2] or C.text[2], value == selected and C.accent[3] or C.text[3])
 
-            item:SetScript("OnEnter", function() itemBg:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.15) end)
+            -- Hover is alpha, not a tint. An accent wash under the cursor reads
+            -- as "this one is chosen", which is what the selected item's own
+            -- accent text already says.
+            item:SetScript("OnEnter", function() itemBg:SetColorTexture(1, 1, 1, Style.Row.hover) end)
             item:SetScript("OnLeave", function() itemBg:SetColorTexture(0, 0, 0, 0) end)
             item:SetScript("OnClick", function()
                 selected = value
@@ -673,7 +734,7 @@ function W.CreateDropdown(_, parent, labelText, opts)
     frame.SetSelected = function(self, value) selected = value; selectedText:SetText(GetDisplayText(value)) end
     frame.GetSelected = function(self) return selected end
 
-    return frame
+    return Place(frame, opts, 50)
 end
 
 function W.CreateInput(_, parent, labelText, opts)
@@ -737,7 +798,7 @@ function W.CreateInput(_, parent, labelText, opts)
     frame.SetText = function(self, t) editBox:SetText(t) end
     frame.ClearFocus = function(self) editBox:ClearFocus() end
 
-    return frame
+    return Place(frame, opts, labelText and 44 or 28)
 end
 
 function W.CreateColorPicker(_, parent, labelText, opts)
@@ -791,15 +852,16 @@ function W.CreateColorPicker(_, parent, labelText, opts)
     frame.SetColor = function(self, newR, newG, newB) r, g, b = newR, newG, newB; swatch:SetBackdropColor(r, g, b, 1); UpdateHex() end
     frame.GetColor = function(self) return r, g, b end
 
-    return frame
+    return Place(frame, opts, 22)
 end
 
 function W:CreateSeparator(parent, x, y, width)
-    local line = parent:CreateTexture(nil, "ARTWORK")
+    -- White at the divider weight rather than the pre-composited border grey, so
+    -- one value stays correct whatever paper it lands on, and with pixel
+    -- snapping off so it cannot vanish at a fractional scale.
+    local line = Style.Hairline(parent, Style.Rule.divider)
     line:SetPoint("TOPLEFT", x, y)
-    line:SetSize(width or 400, 1)
-    -- Full strength: `border` is already the hairline value composited on paper.
-    line:SetColorTexture(C.border[1], C.border[2], C.border[3], 1)
+    line:SetWidth(width or 400)
     return line, y - 12
 end
 
@@ -807,10 +869,17 @@ function W:CreateLabel(parent, text, opts)
     opts = opts or {}
     local label = parent:CreateFontString(nil, "ARTWORK", opts.font or "GameFontNormal")
     label:SetText(text)
-    local color = opts.color or C.text
-    label:SetTextColor(color[1], color[2], color[3], color[4] or 1)
+    -- An explicit colour still wins: plenty of callers pass C.danger or a class
+    -- colour and mean it. Absent one, text lands on the hierarchy - white at the
+    -- primary alpha - rather than on a named grey.
+    local color = opts.color
+    if color then
+        label:SetTextColor(color[1], color[2], color[3], color[4] or 1)
+    else
+        Style.Text(label, opts.size or Style.Size.label, Style.Alpha.primary)
+    end
     if opts.size then
-        label:SetFont(label:GetFont(), opts.size, opts.outline or "")
+        label:SetFont(Style.Face(), opts.size, opts.outline or "")
     end
     -- A FontString with no width sizes itself to its text and stays on one
     -- line, so a paragraph passed here runs off the panel rather than wrapping.
@@ -842,28 +911,26 @@ function W.CreateTabBar(_, parent, tabs, opts)
     bar:SetBackdropColor(0, 0, 0, 0)
     bar:SetBackdropBorderColor(C.border[1], C.border[2], C.border[3], 0)
 
-    local bottomBorder = bar:CreateTexture(nil, "ARTWORK")
+    local bottomBorder = Style.Hairline(bar, Style.Rule.chrome)
     bottomBorder:SetPoint("BOTTOMLEFT", 0, 0)
     bottomBorder:SetPoint("BOTTOMRIGHT", 0, 0)
-    bottomBorder:SetHeight(1)
-    bottomBorder:SetColorTexture(C.border[1], C.border[2], C.border[3], 1)
 
     local tabButtons = {}
     local selectedKey = tabs[1] and tabs[1].key
 
     local function UpdateTabs()
         for _, tb in ipairs(tabButtons) do
-            if tb.key == selectedKey then
-                tb.label:SetTextColor(unpack(C.text))
-                tb.indicator:Show()
-            else
-                tb.label:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-                tb.indicator:Hide()
-            end
+            local isSelected = (tb.key == selectedKey)
+            Style.Text(tb.label, Style.Size.label,
+                isSelected and Style.Alpha.primary or Style.Alpha.muted)
+            tb.indicator:SetShown(isSelected)
         end
     end
 
-    local DOT = 5
+    -- The label is centred and the tab is sized from its text. There used to be
+    -- a dot beside the label, and both numbers below carried a reservation for
+    -- it; the marker is an underline now, so the reservation is gone with it.
+    local LABEL_PAD = 20
 
     local xOff = 8
     for _, tab in ipairs(tabs) do
@@ -874,18 +941,26 @@ function W.CreateTabBar(_, parent, tabs, opts)
         local label = btn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         -- Offset right to leave room for the active dot, so the label does not
         -- shift horizontally when selection changes.
-        label:SetPoint("CENTER", (DOT + 4) / 2, 1)
+        label:SetPoint("CENTER", 0, 1)
         label:SetText(tab.label)
         label:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
 
         local textWidth = label:GetStringWidth()
-        btn:SetWidth(math.max(textWidth + 20 + DOT + 4, 60))
+        btn:SetWidth(math.max(textWidth + LABEL_PAD, 60))
 
-        -- Active marker: an indigo dot to the left of the label, replacing the
-        -- old 2px underline.
+        -- Selection is the accent bar, laid on its side. A row marks itself with
+        -- a bar down its left edge; a tab is a row turned horizontal, so the
+        -- same mark belongs along its bottom. This replaces an indigo dot beside
+        -- the label, which was a second vocabulary for the one idea.
         local indicator = btn:CreateTexture(nil, "OVERLAY")
-        indicator:SetPoint("RIGHT", label, "LEFT", -4, 0)
-        Theme.Dot(indicator, DOT, C.accent)
+        indicator:SetPoint("BOTTOMLEFT", 0, 0)
+        indicator:SetPoint("BOTTOMRIGHT", 0, 0)
+        indicator:SetHeight(Style.Row.bar - 1)
+        indicator:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 1)
+        if indicator.SetSnapToPixelGrid then
+            indicator:SetSnapToPixelGrid(false)
+            indicator:SetTexelSnappingBias(0)
+        end
         indicator:Hide()
 
         btn:SetScript("OnClick", function()

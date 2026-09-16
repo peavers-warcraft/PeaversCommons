@@ -126,6 +126,15 @@ local function Face()
     return display or "Fonts\\FRIZQT__.TTF"
 end
 
+--- The face, for the handful of callers that set a font once themselves rather
+--- than going through Style.Text on every state change - a button label, say,
+--- where only the colour moves on hover and re-applying the font each time is
+--- work for nothing.
+--- @return string path
+function Style.Face()
+    return Face()
+end
+
 --- Set a font string's size and alpha in one call.
 --- @param fontString FontString
 --- @param size number     one of Style.Size

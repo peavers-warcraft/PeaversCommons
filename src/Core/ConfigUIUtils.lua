@@ -279,10 +279,13 @@ function ConfigUIUtils.CreateGlobalAppearanceSection(parent, addonName, addon, x
     local config = addon.Config
 
     -- Section header
+    local Style = PeaversCommons.Style
     local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     header:SetPoint("TOPLEFT", x, y)
     header:SetText("GLOBAL APPEARANCE")
-    header:SetTextColor(unpack(C.eyebrow))
+    -- Muted white, like every other section heading now. This was the last
+    -- indigo eyebrow left in the shared path.
+    Style.Text(header, Style.Size.section, Style.Alpha.muted)
     y = y - 25
 
     -- Description
@@ -468,10 +471,14 @@ function ConfigUIUtils.BuildInfoPage(parentFrame, title, blocks)
         y = y - (height + 16)
     end
 
-    local titleLabel = W:CreateLabel(parentFrame, title, {
-        font = "GameFontNormalLarge",
-        color = C.gold,
-    })
+    -- The page title, in one colour rather than the accent.
+    --
+    -- This passed C.gold, which is not gold: the palette aliases it to the same
+    -- indigo as the accent, with a comment saying "section headers -> indigo
+    -- eyebrow". So every Information page in the collection - twenty-two of them
+    -- - spent the accent on a heading that says the same thing every time.
+    local Style = PeaversCommons.Style
+    local titleLabel = Style.Label(parentFrame, title, Style.Size.hero, Style.Alpha.primary)
     titleLabel:SetPoint("TOPLEFT", indent, y)
     y = y - 30
 
