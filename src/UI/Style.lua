@@ -178,10 +178,20 @@ local function Thin(texture)
     return texture
 end
 
---- A one-pixel horizontal rule at one of the graded alphas.
-function Style.Hairline(parent, alpha)
+--- A one-pixel rule at one of the graded alphas.
+---
+--- Horizontal by default. Pass `vertical` for the kind that separates two
+--- columns - a sidebar from its content pane, say - which is the same line
+--- turned on its side and wants exactly the same no-snap treatment. The caller
+--- still anchors both ends; this only decides which dimension is pinned to one
+--- pixel.
+function Style.Hairline(parent, alpha, vertical)
     local line = Thin(parent:CreateTexture(nil, "ARTWORK"))
-    line:SetHeight(1)
+    if vertical then
+        line:SetWidth(1)
+    else
+        line:SetHeight(1)
+    end
     line:SetColorTexture(1, 1, 1, alpha or Style.Rule.divider)
     return line
 end
