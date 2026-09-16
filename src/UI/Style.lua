@@ -391,6 +391,16 @@ local VARIANTS = {
         border = 0.35, borderHover = 0.60,
         textAlpha = 0.55, hoverAlpha = 1.00,
     },
+    -- A destructive action: deleting a profile, resetting a layout. Built like
+    -- primary and coloured differently, rather than made heavier - weight would
+    -- read as "this is the recommended one", which is the opposite of the point.
+    -- It sits below secondary in alpha at rest so it does not shout from across
+    -- the window, and comes fully up under the cursor.
+    danger = {
+        color = C.danger or { 0.90, 0.30, 0.30 },
+        border = 0.55, borderHover = 1.00,
+        textAlpha = 0.75, hoverAlpha = 1.00,
+    },
     -- A text link rather than a button: no fill and no border at all, for the
     -- way out of a screen, which should be available without competing with the
     -- way on. Having no `border` is what marks it as one.
