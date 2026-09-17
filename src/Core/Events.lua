@@ -32,6 +32,8 @@ function Events:RegisterEvent(event, handler)
         end
         table.insert(eventHandlers[event], handler)
     end
+
+    return true
 end
 
 function Events:UnregisterEvent(event, handler)

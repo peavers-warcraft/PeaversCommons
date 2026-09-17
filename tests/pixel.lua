@@ -10,7 +10,7 @@
 --
 -- Not addon code, and not packaged (see .pkgmeta). It overwrites globals on
 -- purpose to drive the file under test.
----@diagnostic disable: undefined-global, duplicate-set-field, lowercase-global
+---@diagnostic disable: undefined-global, duplicate-set-field, lowercase-global, missing-fields
 --------------------------------------------------------------------------------
 
 local screenHeight, uiScale = 1080, 1.0
