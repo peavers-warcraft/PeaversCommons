@@ -55,6 +55,7 @@ function harness.frame(rect, scale, own, children)
 
 	if children then
 		function frame:GetChildren()
+			---@diagnostic disable-next-line: deprecated
 			return table.unpack(children)
 		end
 	end
