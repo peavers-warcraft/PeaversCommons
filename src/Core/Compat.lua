@@ -1,8 +1,10 @@
 --------------------------------------------------------------------------------
 -- PeaversCommons compatibility
 --
--- One place that knows which game client this is and what it can do, so the
--- rest of the collection asks a question instead of assuming retail.
+-- What this client can DO. Which client it IS lives in Client.lua next door, and
+-- the split is the point: a capability is found out by asking the client, and a
+-- client is identified by its interface number. Answering either with the other's
+-- method is where the Forever bugs came from.
 --
 -- The flavour flags are for wording and defaults. Anything that decides whether
 -- code can run asks about the capability itself - an event, a frame, a function -
@@ -20,38 +22,24 @@ PeaversCommons.Compat = Compat
 -- Which client
 --------------------------------------------------------------------------------
 
-local version, build, _, interface = GetBuildInfo()
-Compat.version = version
-Compat.build = tonumber(build)
-Compat.interface = tonumber(interface) or 0
+-- Which client this is now lives in PeaversCommons.Client, which is the only
+-- place that works it out. These are aliases so that code written against Compat
+-- keeps reading, and so that the two can never disagree. New code should ask
+-- Client directly; what belongs here is the capability half below - the questions
+-- answered by asking the client rather than by comparing a version number.
+local Client = PeaversCommons.Client
 
--- WoW Forever (codename Camelot) has to be identified first, and only by its
--- interface range, because every other signal it gives is retail's. It continues
--- the vanilla 1.x line, so it shares a major version with Classic Era, and it
--- reports WOW_PROJECT_ID equal to WOW_PROJECT_MAINLINE - the same value retail
--- reports - so a mainline check reads it as retail and a major-version check
--- reads it as Era. Measured on the beta: 1.60.1.69893, interface 16001,
--- WOW_PROJECT_ID 1, GetExpansionLevel() 0.
-Compat.isForever = Compat.interface >= 16000 and Compat.interface < 20000
+Compat.version = Client.version
+Compat.build = Client.build
+Compat.interface = Client.interface
 
-local project = _G.WOW_PROJECT_ID
-Compat.isRetail = not Compat.isForever
-    and project ~= nil and project == _G.WOW_PROJECT_MAINLINE
-Compat.isClassic = not Compat.isRetail and not Compat.isForever
-
--- By interface number rather than project ID: the project constants for the
--- newer Classic clients have changed names before, the interface number has not.
-Compat.isClassicEra = Compat.isClassic and Compat.interface < 16000
-Compat.isAnniversary = Compat.isClassic and Compat.interface >= 20000 and Compat.interface < 30000
-Compat.isMists = Compat.isClassic and Compat.interface >= 50000 and Compat.interface < 60000
-
--- Which generation of client this is, as opposed to which game it is. Forever is
--- built from the same branch as retail and probes identically to it - the same
--- valid events, the same graphics CVars, the same frame methods, a newer build
--- number, and the modern tooltip, aura and minimap APIs Classic Era lacks - while
--- its content is vanilla. Ask this when the question is "can I use the modern
--- API"; ask isRetail when the question is "does this game have Mythic+".
-Compat.isModernClient = Compat.isRetail or Compat.isForever
+Compat.isForever = Client.isForever
+Compat.isRetail = Client.isRetail
+Compat.isClassic = Client.isClassic
+Compat.isClassicEra = Client.isClassicEra
+Compat.isAnniversary = Client.isAnniversary
+Compat.isMists = Client.isMists
+Compat.isModernClient = Client.isModernClient
 
 --------------------------------------------------------------------------------
 -- Events
