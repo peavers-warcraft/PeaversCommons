@@ -25,15 +25,33 @@ Compat.version = version
 Compat.build = tonumber(build)
 Compat.interface = tonumber(interface) or 0
 
+-- WoW Forever (codename Camelot) has to be identified first, and only by its
+-- interface range, because every other signal it gives is retail's. It continues
+-- the vanilla 1.x line, so it shares a major version with Classic Era, and it
+-- reports WOW_PROJECT_ID equal to WOW_PROJECT_MAINLINE - the same value retail
+-- reports - so a mainline check reads it as retail and a major-version check
+-- reads it as Era. Measured on the beta: 1.60.1.69893, interface 16001,
+-- WOW_PROJECT_ID 1, GetExpansionLevel() 0.
+Compat.isForever = Compat.interface >= 16000 and Compat.interface < 20000
+
 local project = _G.WOW_PROJECT_ID
-Compat.isRetail = project ~= nil and project == _G.WOW_PROJECT_MAINLINE
-Compat.isClassic = not Compat.isRetail
+Compat.isRetail = not Compat.isForever
+    and project ~= nil and project == _G.WOW_PROJECT_MAINLINE
+Compat.isClassic = not Compat.isRetail and not Compat.isForever
 
 -- By interface number rather than project ID: the project constants for the
 -- newer Classic clients have changed names before, the interface number has not.
-Compat.isClassicEra = Compat.isClassic and Compat.interface < 20000
+Compat.isClassicEra = Compat.isClassic and Compat.interface < 16000
 Compat.isAnniversary = Compat.isClassic and Compat.interface >= 20000 and Compat.interface < 30000
 Compat.isMists = Compat.isClassic and Compat.interface >= 50000 and Compat.interface < 60000
+
+-- Which generation of client this is, as opposed to which game it is. Forever is
+-- built from the same branch as retail and probes identically to it - the same
+-- valid events, the same graphics CVars, the same frame methods, a newer build
+-- number, and the modern tooltip, aura and minimap APIs Classic Era lacks - while
+-- its content is vanilla. Ask this when the question is "can I use the modern
+-- API"; ask isRetail when the question is "does this game have Mythic+".
+Compat.isModernClient = Compat.isRetail or Compat.isForever
 
 --------------------------------------------------------------------------------
 -- Events
