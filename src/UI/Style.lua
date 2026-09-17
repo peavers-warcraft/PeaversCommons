@@ -179,12 +179,24 @@ end
 -- Lines
 -- ---------------------------------------------------------------------------
 
+-- A line one physical pixel thick, whatever the UI scale happens to be.
+--
+-- Two separate things have to be right, and for years only the first was.
+--
 -- WoW's own pixel snapping is what makes a one-pixel line disappear at a
 -- fractional UI scale, so it is switched off on anything this thin.
-local function Thin(texture)
+--
+-- And the size has to be asked for in pixels rather than in UI units. A unit is
+-- a whole pixel only at the pixel perfect scale; at the 0.53 this collection's
+-- pack pins, SetHeight(1) asks for three quarters of a pixel and gets something
+-- softer and dimmer than the line that was wanted. Pixel:Thin sizes it in real
+-- pixels and re-sizes it whenever the scale moves - see UI/Pixel.lua.
+local Pixel = PeaversCommons.Pixel
+
+local function Thin(texture, axis)
     if texture.SetSnapToPixelGrid then texture:SetSnapToPixelGrid(false) end
     if texture.SetTexelSnappingBias then texture:SetTexelSnappingBias(0) end
-    return texture
+    return Pixel:Thin(texture, axis)
 end
 
 --- A one-pixel rule at one of the graded alphas.
@@ -195,12 +207,9 @@ end
 --- still anchors both ends; this only decides which dimension is pinned to one
 --- pixel.
 function Style.Hairline(parent, alpha, vertical)
-    local line = Thin(parent:CreateTexture(nil, "ARTWORK"))
-    if vertical then
-        line:SetWidth(1)
-    else
-        line:SetHeight(1)
-    end
+    -- Thin sets the pinned dimension itself, in pixels, and keeps setting it as
+    -- the scale changes. The caller anchors the other one.
+    local line = Thin(parent:CreateTexture(nil, "ARTWORK"), vertical and "width" or "height")
     line:SetColorTexture(1, 1, 1, alpha or Style.Rule.divider)
     return line
 end
@@ -216,26 +225,35 @@ end
 function Style.Border(frame)
     local sides = {}
     for _, side in ipairs({ "top", "bottom", "left", "right" }) do
-        sides[side] = Thin(frame:CreateTexture(nil, "BORDER"))
+        local axis = (side == "left" or side == "right") and "width" or "height"
+        sides[side] = Thin(frame:CreateTexture(nil, "BORDER"), axis)
     end
 
     sides.top:SetPoint("TOPLEFT", 0, 0)
     sides.top:SetPoint("TOPRIGHT", 0, 0)
-    sides.top:SetHeight(1)
 
     sides.bottom:SetPoint("BOTTOMLEFT", 0, 0)
     sides.bottom:SetPoint("BOTTOMRIGHT", 0, 0)
-    sides.bottom:SetHeight(1)
 
     -- Inset by one so the corners are not painted twice: overlapping alpha at
-    -- four corners shows as a brighter dot on a dim border.
-    sides.left:SetPoint("TOPLEFT", 0, -1)
-    sides.left:SetPoint("BOTTOMLEFT", 0, 1)
-    sides.left:SetWidth(1)
+    -- four corners shows as a brighter dot on a dim border. One *pixel*, not one
+    -- unit, or the inset stops matching the thickness of the bars it is dodging
+    -- the moment the scale is not pixel perfect.
+    local function InsetSides()
+        local inset = Pixel:Size(1)
 
-    sides.right:SetPoint("TOPRIGHT", 0, -1)
-    sides.right:SetPoint("BOTTOMRIGHT", 0, 1)
-    sides.right:SetWidth(1)
+        sides.left:SetPoint("TOPLEFT", 0, -inset)
+        sides.left:SetPoint("BOTTOMLEFT", 0, inset)
+
+        sides.right:SetPoint("TOPRIGHT", 0, -inset)
+        sides.right:SetPoint("BOTTOMRIGHT", 0, inset)
+    end
+
+    InsetSides()
+
+    -- Re-anchored as well as re-sized when the scale moves: the four bars resize
+    -- themselves through Pixel, but the inset is a position and has to be told.
+    Pixel:OnRefresh(frame, InsetSides)
 
     local border = {}
 

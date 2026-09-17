@@ -11,3 +11,4 @@ ignore:
   - LICENSE
   - local_deploy.sh
   - local_deploy.ps1
+  - tests
