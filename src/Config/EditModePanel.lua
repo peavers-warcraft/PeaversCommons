@@ -59,7 +59,7 @@ local function Build()
 
     -- Blizzard's own dialog border, so this reads as part of Edit Mode.
     local border = CreateFrame("Frame", nil, panel, "DialogBorderTranslucentTemplate")
-    border:SetAllPoints(panel)
+    border:SetAllPoints()
     panel.Border = border
 
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")

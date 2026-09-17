@@ -47,6 +47,7 @@ end
 
 for _, case in ipairs(CASES) do
     -- Fresh globals per case: the module reads GetBuildInfo once, at load.
+    ---@diagnostic disable-next-line: missing-fields
     _G.PeaversCommons = {}
     _G.GetBuildInfo = function() return case.ver, "69893", "", case.iface end
 
