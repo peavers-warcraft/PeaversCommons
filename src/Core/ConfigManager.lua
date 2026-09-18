@@ -302,6 +302,82 @@ ConfigManager.CommonDefaults = {
 -- ConfigManager Instance Methods
 --------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
+-- Writing a config back to its saved table
+--
+-- Save used to copy the config's keys across and stop there, so a setting set
+-- to nil was never removed from disk. The old value stayed in SavedVariables,
+-- Load put it straight back at the next login, and the nil was quietly undone.
+-- Every "clear this" in the collection went nowhere: an undo slot, a one-time
+-- notice, `installedVersion = nil` to offer an installer again, and the stray
+-- keys Reset exists to drop.
+--
+-- A key is removed only when this config itself read it from, or wrote it to,
+-- that same table and no longer holds it. Anything other code put into the
+-- saved table directly was never this config's to delete.
+--------------------------------------------------------------------------------
+
+-- owned[config][target] = { [key] = true }. Weak, so a config or a profile table
+-- that has gone away takes its bookkeeping with it.
+local owned = setmetatable({}, { __mode = "k" })
+
+local function OwnedKeys(config, target)
+    local byTarget = owned[config]
+    if not byTarget then
+        byTarget = setmetatable({}, { __mode = "k" })
+        owned[config] = byTarget
+    end
+
+    local keys = byTarget[target]
+    if not keys then
+        keys = {}
+        byTarget[target] = keys
+    end
+    return keys
+end
+
+-- Copy a saved table into the config, remembering which keys came from it.
+local function ReadSettings(config, source)
+    local keys = OwnedKeys(config, source)
+    for k, v in pairs(source) do
+        config[k] = v
+        keys[k] = true
+    end
+end
+
+-- Write the config's settings into a saved table. `skip` names the config's own
+-- bookkeeping, which is not a setting and never goes to disk.
+local function WriteSettings(config, target, skip)
+    local keys = OwnedKeys(config, target)
+
+    for k in pairs(keys) do
+        if config[k] == nil then
+            target[k] = nil
+            keys[k] = nil
+        end
+    end
+
+    for k, v in pairs(config) do
+        if type(v) ~= "function" and not skip[k] then
+            target[k] = v
+            keys[k] = true
+        end
+    end
+end
+
+local FLAT_SKIP = { addon = true, dbName = true, defaults = true, settingsKey = true }
+local PROFILE_SKIP = {
+    addon = true, dbName = true, defaults = true, profiles = true, currentProfile = true,
+}
+local CHARACTER_SKIP = {
+    addon = true, dbName = true, defaults = true, settingsKey = true,
+    currentCharacter = true, currentRealm = true,
+}
+local CHARACTER_SPEC_SKIP = {
+    addon = true, dbName = true, defaults = true, settingsKey = true,
+    currentCharacter = true, currentRealm = true, currentSpec = true, specIDs = true,
+}
+
 function ConfigManager.New(cls, addon, defaultSettings, options)
     local config = {}
 
@@ -366,12 +442,7 @@ function ConfigManager.New(cls, addon, defaultSettings, options)
             targetTable = _G[self.dbName]
         end
         
-        for k, v in pairs(self) do
-            if type(v) ~= "function" and k ~= "addon" and k ~= "dbName" and 
-               k ~= "defaults" and k ~= "settingsKey" then
-                targetTable[k] = v
-            end
-        end
+        WriteSettings(self, targetTable, FLAT_SKIP)
         
         return true
     end
@@ -393,9 +464,7 @@ function ConfigManager.New(cls, addon, defaultSettings, options)
             sourceTable = _G[self.dbName]
         end
         
-        for k, v in pairs(sourceTable) do
-            self[k] = v
-        end
+        ReadSettings(self, sourceTable)
         
         return true
     end
@@ -591,12 +660,7 @@ function ConfigManager.NewProfileBased(cls, addon, defaultSettings, options)
         
         _G[self.dbName].currentProfile = self.currentProfile
         
-        for k, v in pairs(self) do
-            if type(v) ~= "function" and k ~= "addon" and k ~= "dbName" and k ~= "defaults" 
-               and k ~= "profiles" and k ~= "currentProfile" then
-                _G[self.dbName].profiles[self.currentProfile][k] = v
-            end
-        end
+        WriteSettings(self, _G[self.dbName].profiles[self.currentProfile], PROFILE_SKIP)
         
         return true
     end
@@ -618,9 +682,7 @@ function ConfigManager.NewProfileBased(cls, addon, defaultSettings, options)
             return false
         end
         
-        for k, v in pairs(_G[self.dbName].profiles[self.currentProfile]) do
-            self[k] = v
-        end
+        ReadSettings(self, _G[self.dbName].profiles[self.currentProfile])
         
         self.profiles = Utils.TableKeys(_G[self.dbName].profiles)
         
@@ -744,13 +806,7 @@ function ConfigManager.NewCharacterBased(cls, addon, defaultSettings, options)
 
         local profile = _G[self.dbName].profiles[charKey]
 
-        for k, v in pairs(self) do
-            if type(v) ~= "function" and k ~= "addon" and k ~= "dbName" and
-               k ~= "defaults" and k ~= "settingsKey" and
-               k ~= "currentCharacter" and k ~= "currentRealm" then
-                profile[k] = v
-            end
-        end
+        WriteSettings(self, profile, CHARACTER_SKIP)
 
         return true
     end
@@ -777,9 +833,7 @@ function ConfigManager.NewCharacterBased(cls, addon, defaultSettings, options)
 
         local profile = _G[self.dbName].profiles[charKey]
 
-        for k, v in pairs(profile) do
-            self[k] = v
-        end
+        ReadSettings(self, profile)
 
         return true
     end
@@ -902,14 +956,7 @@ function ConfigManager.NewCharacterSpecBased(cls, addon, defaultSettings, option
 
         local profile = _G[self.dbName].profiles[profileKey]
 
-        for k, v in pairs(self) do
-            if type(v) ~= "function" and k ~= "addon" and k ~= "dbName" and
-               k ~= "defaults" and k ~= "settingsKey" and
-               k ~= "currentCharacter" and k ~= "currentRealm" and
-               k ~= "currentSpec" and k ~= "specIDs" then
-                profile[k] = v
-            end
-        end
+        WriteSettings(self, profile, CHARACTER_SPEC_SKIP)
 
         return true
     end
@@ -958,9 +1005,7 @@ function ConfigManager.NewCharacterSpecBased(cls, addon, defaultSettings, option
 
         local profile = _G[self.dbName].profiles[profileKey]
 
-        for k, v in pairs(profile) do
-            self[k] = v
-        end
+        ReadSettings(self, profile)
 
         return true
     end
