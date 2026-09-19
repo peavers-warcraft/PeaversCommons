@@ -1173,12 +1173,17 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
                 return rawget(t, key)
             end,
             __newindex = function(t, key, value)
-                if reservedKeys[key] then
+                -- Methods and internals stay on the object. Everything else is a
+                -- setting and belongs in the profile, including one whose default
+                -- is nil: a nil default is simply absent from the defaults table,
+                -- so those were kept in memory only - never saved, and shared by
+                -- every profile rather than scoped to one.
+                if reservedKeys[key] or type(value) == "function" then
                     rawset(t, key, value)
                     return
                 end
                 local db = rawget(t, "db")
-                if db and db.profile and mergedDefaults[key] ~= nil then
+                if db and db.profile then
                     db.profile[key] = value
                 else
                     rawset(t, key, value)
