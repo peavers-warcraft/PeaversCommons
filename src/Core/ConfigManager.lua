@@ -1202,6 +1202,8 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
         self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChangedHandler")
         self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChangedHandler")
 
+        self:RemoveJunkProfiles()
+
         -- Set up spec-based auto-switching
         if self.profileType == "spec" then
             self:SetupSpecSwitching()
@@ -1213,6 +1215,30 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
         end
 
         return true
+    end
+
+    -- Two kinds of profile nobody made on purpose end up in the list: one named
+    -- for a spec that had no name yet ("Name - Realm ()"), and one keyed by a
+    -- spec ID of 0 by the config manager this one replaced ("Name-Realm-0").
+    --
+    -- Only ones holding nothing are removed. A junk name that somebody has since
+    -- put settings into is theirs, and so is whichever one they are on now, so
+    -- neither is taken away - this tidies a list, it does not decide what anyone
+    -- has finished with.
+    local function IsUnnamedSpecProfile(name)
+        return name:find("%(%)$") ~= nil or name:find("%-0$") ~= nil
+    end
+
+    function config:RemoveJunkProfiles()
+        local sv = _G[self.dbName]
+        if not sv or not sv.profiles then return end
+
+        local current = self:GetCurrentProfile()
+        for name, stored in pairs(sv.profiles) do
+            if name ~= current and IsUnnamedSpecProfile(name) and next(stored) == nil then
+                self.db:DeleteProfile(name, true)
+            end
+        end
     end
 
     function config:OnProfileChangedHandler()
