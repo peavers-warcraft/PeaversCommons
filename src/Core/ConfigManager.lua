@@ -1077,6 +1077,7 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
     local reservedKeys = {
         addon = true, db = true, dbName = true, defaults = true,
         profileType = true, specFrame = true, onProfileChanged = true,
+        lastSpecID = true,
     }
 
     -- The config object
@@ -1342,6 +1343,21 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
 
         local specID, specName = PeaversCommons.Compat.GetSpecializationInfo(specIndex)
         if not specID or not specName then return false end
+
+        -- PLAYER_SPECIALIZATION_CHANGED fires on every level-up without the spec
+        -- having changed, so the event alone says nothing. Only a reading that
+        -- differs from the last one is a real change; the first reading of a
+        -- session is that session's baseline and still applies the spec profile,
+        -- which is what login needs.
+        if self.lastSpecID == specID then return true end
+        self.lastSpecID = specID
+
+        -- PeaversConfig lets somebody pick one profile for the whole collection.
+        -- That choice is explicit and a spec profile is a default, so the default
+        -- does not get to overrule it - which is what used to happen on every
+        -- level-up, putting their bars and position back.
+        local ecosystemProfile = _G.PeaversConfigDB and _G.PeaversConfigDB.activeEcosystemProfile
+        if ecosystemProfile and ecosystemProfile ~= "" then return true end
 
         local charName = UnitName("player")
         local realm = GetRealmName()
