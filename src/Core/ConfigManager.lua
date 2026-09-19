@@ -1346,8 +1346,11 @@ function ConfigManager.NewWithAceDB(cls, addon, defaultSettings, options)
         local specIndex = PeaversCommons.Compat.GetSpecialization()
         if not specIndex then return false end
 
+        -- Early in login the spec can answer with an ID and an empty name, and an
+        -- empty string is perfectly true - which is where the "Name - Realm ()"
+        -- profiles came from. Treat it as not knowing yet.
         local specID, specName = PeaversCommons.Compat.GetSpecializationInfo(specIndex)
-        if not specID or not specName then return false end
+        if not specID or not specName or specName == "" then return false end
 
         -- PLAYER_SPECIALIZATION_CHANGED fires on every level-up without the spec
         -- having changed, so the event alone says nothing. Only a reading that
