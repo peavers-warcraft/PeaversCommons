@@ -590,14 +590,22 @@ function W.CreateDropdown(_, parent, labelText, opts)
 
     selectedText:SetText(GetDisplayText(selected))
 
-    local menuFrame = CreateFrame("Frame", nil, btn, "BackdropTemplate")
+    -- The menu belongs to UIParent, not the button. Clipping is inherited from
+    -- every ancestor whatever the strata, so a menu parented to a dropdown that
+    -- sits in a scroll box is cut off at the scroll box's edge - on a short
+    -- Edit Mode panel that left most of a list unreachable.
+    local menuFrame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     menuFrame:SetBackdrop(FLAT_BACKDROP)
     menuFrame:SetBackdropColor(C.bgPanel[1], C.bgPanel[2], C.bgPanel[3], 0.98)
     menuFrame:SetBackdropBorderColor(unpack(C.border))
     menuFrame:SetFrameStrata("TOOLTIP")
+    menuFrame:SetClampedToScreen(true)
     menuFrame:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
     menuFrame:SetPoint("TOPRIGHT", btn, "BOTTOMRIGHT", 0, -2)
     menuFrame:Hide()
+
+    -- No longer a child, so nothing closes it when the dropdown goes away.
+    btn:HookScript("OnHide", function() menuFrame:Hide() end)
 
     -- A dropdown of collected addon buttons is as long as the number of addons
     -- installed, and a font list is longer still. Past this the menu scrolls
@@ -713,7 +721,11 @@ function W.CreateDropdown(_, parent, labelText, opts)
     end
 
     btn:SetScript("OnClick", function()
-        if menuFrame:IsShown() then menuFrame:Hide() else BuildMenu(); menuFrame:Show() end
+        if menuFrame:IsShown() then menuFrame:Hide(); return end
+        -- Nor does it inherit the dropdown's scale, so it takes it on opening.
+        menuFrame:SetScale(btn:GetEffectiveScale() / UIParent:GetEffectiveScale())
+        BuildMenu()
+        menuFrame:Show()
     end)
     btn:SetScript("OnEnter", function() btn:SetBackdropBorderColor(unpack(C.borderHover)) end)
     btn:SetScript("OnLeave", function()
