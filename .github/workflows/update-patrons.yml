@@ -19,7 +19,15 @@ permissions:
 
 jobs:
   update-patrons:
-    runs-on: warcraft-runners
+    # Blacksmith, like the shared workflows in peavers-warcraft-workflows. The
+    # in-cluster `warcraft-runners` pool this used to name no longer exists (ARC
+    # wedged it half-deleted on 2026-09-25), and a `runs-on` naming a pool that
+    # is not there queues rather than failing - so this daily job sat invisible
+    # until GitHub cancelled it at 24 hours. Nothing here needs the LAN: the
+    # Vault step below already talks to the public tunnel on purpose, and the
+    # App token action falls back to it too. RUNNER_LABEL moves it without a
+    # commit.
+    runs-on: ${{ vars.RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
     # Only run on the original repository, not forks
     if: github.repository == 'peavers-warcraft/PeaversCommons'
     steps:
