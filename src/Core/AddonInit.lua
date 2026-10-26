@@ -176,6 +176,18 @@ function AddonInit:RegisterCommonEvents(addon)
             addon.Core:UpdateFrameVisibility()
         end
     end)
+
+    -- Content changes for the showIn<Content> settings. A keystone starting does
+    -- not change zone, so it is listened for separately. Events skips any the
+    -- client does not know, which is every challenge mode event on Classic Era.
+    for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA",
+        "CHALLENGE_MODE_START", "CHALLENGE_MODE_COMPLETED" }) do
+        PeaversCommons.Events:RegisterEvent(event, function()
+            if addon.Core and addon.Core.UpdateFrameVisibility then
+                addon.Core:UpdateFrameVisibility()
+            end
+        end)
+    end
 end
 
 -- Full setup helper that combines all common initialization

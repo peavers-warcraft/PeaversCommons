@@ -192,6 +192,14 @@ ConfigSchema.Common = {
         "ALWAYS",
         { label = "Display Mode", category = "Behavior" }
     ),
+    -- Content visibility, read by VisibilityManager:MatchesContent
+    showInMythicPlus = ConfigSchema.Boolean(true, { label = "Show in Mythic+", category = "Behavior" }),
+    showInRaid = ConfigSchema.Boolean(true, { label = "Show in Raids", category = "Behavior" }),
+    showInDungeon = ConfigSchema.Boolean(true, { label = "Show in Dungeons", category = "Behavior" }),
+    showInDelve = ConfigSchema.Boolean(true, { label = "Show in Delves", category = "Behavior" }),
+    showInScenario = ConfigSchema.Boolean(true, { label = "Show in Scenarios", category = "Behavior" }),
+    showInPvP = ConfigSchema.Boolean(true, { label = "Show in PvP", category = "Behavior" }),
+    showInOpenWorld = ConfigSchema.Boolean(true, { label = "Show in the Open World", category = "Behavior" }),
     updateInterval = ConfigSchema.Dropdown(
         {
             [0.5] = "0.5s",
