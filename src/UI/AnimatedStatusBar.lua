@@ -130,14 +130,20 @@ end
 -- @param value: New value
 -- @param noAnimation: Skip animation if true
 function AnimatedStatusBar:SetValue(value, noAnimation)
-    -- 12.0.5+: Secret values can't be clamped/compared/animated.
-    -- Pass directly to the WoW StatusBar widget which natively accepts secrets.
+    -- 12.0.5+: Secret values can't be clamped, compared or animated from Lua.
+    -- The StatusBar widget accepts them and can ease toward them itself, so the
+    -- bar still glides in combat instead of snapping.
     if issecretvalue and issecretvalue(value) then
         self.animationGroup:Stop()
         -- Forget the last readable value, or a reading equal to it after combat
         -- would be skipped and leave the bar showing whatever combat left behind
         self.value = nil
-        self.frame.bar:SetValue(value)
+        local interpolation = Enum.StatusBarInterpolation
+        if interpolation and self.smoothing and not noAnimation then
+            self.frame.bar:SetValue(value, interpolation.ExponentialEaseOut)
+        else
+            self.frame.bar:SetValue(value)
+        end
         return
     end
 
