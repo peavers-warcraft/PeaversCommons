@@ -133,6 +133,10 @@ function AnimatedStatusBar:SetValue(value, noAnimation)
     -- 12.0.5+: Secret values can't be clamped/compared/animated.
     -- Pass directly to the WoW StatusBar widget which natively accepts secrets.
     if issecretvalue and issecretvalue(value) then
+        self.animationGroup:Stop()
+        -- Forget the last readable value, or a reading equal to it after combat
+        -- would be skipped and leave the bar showing whatever combat left behind
+        self.value = nil
         self.frame.bar:SetValue(value)
         return
     end
