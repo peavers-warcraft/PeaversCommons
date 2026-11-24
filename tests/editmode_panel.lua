@@ -389,6 +389,7 @@ Check("panel: no hidden row", RowLabelled("How Fancy"), nil)
 -- Check box.
 do
     local row = RowLabelled("Fancy")
+    assert(row)
     Check("checkbox: shows the stored value", row.Button.checked, false)
     row.Button.checked = true
     row.Button:Fire("OnClick")
@@ -407,6 +408,7 @@ end
 do
     local before = #applied
     local row = RowLabelled("Opacity")
+    assert(row)
     Check("slider: value", row.Slider.value, 0.5)
     Check("slider: steps", row.Slider.steps, 20)
     Check("slider: setting up is not a change", #applied, before)
@@ -431,6 +433,7 @@ end
 -- Dropdown.
 do
     local row = RowLabelled("Mode")
+    assert(row)
     local menu = row.Dropdown:Menu()
     Check("dropdown: options", #menu, 2)
     Check("dropdown: option text", menu[2].text, "Second")
@@ -446,6 +449,7 @@ end
 -- Colour, including a picker that outlives the row it was opened from.
 do
     local row = RowLabelled("Tint")
+    assert(row)
     Check("colour: swatch shows the stored colour", row.Swatch.color[1], 1)
 
     row.Swatch:Fire("OnClick")
@@ -467,6 +471,7 @@ end
 -- Typed number and text.
 do
     local row = RowLabelled("Offset")
+    assert(row)
     Check("number: shows the stored value", row.EditBox.text, "10")
 
     row.EditBox:SetFocus()
@@ -486,6 +491,7 @@ do
     Check("number: negatives", config.offset, -40)
 
     local text = RowLabelled("Title")
+    assert(text)
     text.EditBox.text = "goodbye"
     text.EditBox:Fire("OnEditFocusLost")
     Check("text: writes on losing focus", config.title, "goodbye")
@@ -494,6 +500,7 @@ end
 -- Disabled.
 do
     local row = RowLabelled("Locked Thing")
+    assert(row)
     Check("disabled: control is disabled", row.Button.enabled, false)
     Check("enabled: control is enabled", RowLabelled("Fancy").Button.enabled, true)
 end
@@ -504,6 +511,7 @@ do
     Check("selector: title", Panel.frame.Title.text, "Addon A - Things")
 
     local shown = RowLabelled("Show This Thing")
+    assert(shown)
     Check("selector: reads the first choice", shown.Button.checked, true)
 
     local menu = RowLabelled("Thing").Dropdown:Menu()
@@ -511,6 +519,7 @@ do
     RunTimers()
 
     shown = RowLabelled("Show This Thing")
+    assert(shown)
     Check("selector: reads the new choice", shown.Button.checked, false)
 
     shown.Button.checked = true
