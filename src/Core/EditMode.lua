@@ -71,6 +71,9 @@ local function OpenGroup(registration, section)
         -- Keyed by frame as well as group, so clicking "Bars" on one frame and
         -- then on another reopens rather than toggling shut.
         key = registration.key .. ":" .. section.key,
+        -- Whose settings these are, so the panel can be shut when something
+        -- else is selected instead of sitting beside the wrong dialog.
+        owner = registration.key,
         title = (registration.name or "") .. " - " .. section.label,
         schema = registration.schema,
         context = registration.context,
@@ -207,6 +210,68 @@ end
 -- Registration
 --------------------------------------------------------------------------------
 
+-- The panel shows one frame's settings and hangs off that frame's dialog. Left
+-- alone it outlives both: select a different frame and "Dynamic Stats - Bars"
+-- is still open beside the unit frame's dialog, still editing Dynamic Stats.
+-- So it is shut whenever what it belongs to stops being what is selected.
+local function ClosePanelUnlessOwnedBy(key)
+    local panel = PeaversCommons.EditModePanel
+    if panel and panel:IsShown() and panel:Owner() ~= key then
+        panel:Hide()
+    end
+end
+
+local dialogHooked = false
+
+local function HookDialog()
+    if dialogHooked then return end
+
+    local dialog = LibEditMode.internal and LibEditMode.internal.dialog
+    if not dialog then return end
+    dialogHooked = true
+
+    dialog:HookScript("OnHide", function() ClosePanelUnlessOwnedBy(nil) end)
+
+    -- Update runs for a new selection and again each time the selected frame is
+    -- dropped, so it is the selection that is compared rather than the call.
+    if type(dialog.Update) == "function" then
+        hooksecurefunc(dialog, "Update", function(_, selection)
+            local frame = selection and selection.parent
+            ClosePanelUnlessOwnedBy(frame and tostring(frame) or nil)
+        end)
+    end
+end
+
+local systemsHooked = false
+
+-- Blizzard's side of the same thing: its dialog does not close when another
+-- system is selected, it is re-pointed, so there is no OnHide to listen for.
+local function HookSystems()
+    if systemsHooked then return end
+    systemsHooked = true
+
+    local manager = _G.EditModeManagerFrame
+    if manager and type(manager.SelectSystem) == "function" then
+        hooksecurefunc(manager, "SelectSystem", function(_, systemFrame)
+            local key
+            if systemFrame and systemFrame.system then
+                key = "system:" .. tostring(systemFrame.system) .. ":" .. tostring(systemFrame.systemIndex or 0)
+            end
+            ClosePanelUnlessOwnedBy(key)
+        end)
+    end
+
+    local blizzardDialog = _G.EditModeSystemSettingsDialog
+    if blizzardDialog then
+        blizzardDialog:HookScript("OnHide", function()
+            local owner = PeaversCommons.EditModePanel and PeaversCommons.EditModePanel:Owner()
+            if type(owner) == "string" and owner:find("^system:") then
+                PeaversCommons.EditModePanel:Hide()
+            end
+        end)
+    end
+end
+
 local function HookCallbacks()
     if hooked then return end
     hooked = true
@@ -288,6 +353,8 @@ function EditMode.Register(_, spec)
     -- The dialog is built by the first AddFrame, so this is the earliest the
     -- panel can be told what to anchor itself to.
     registration.dialog = LibEditMode.internal and LibEditMode.internal.dialog
+    HookDialog()
+    HookSystems()
 
     local buttons = BuildGroupButtons(registration)
     for _, button in ipairs(spec.buttons or {}) do
@@ -363,6 +430,7 @@ function EditMode.RegisterSystem(_, spec)
     EditMode.registrations[#EditMode.registrations + 1] = registration
 
     HookCallbacks()
+    HookSystems()
 
     if PeaversCommons.EditModeStyle then
         PeaversCommons.EditModeStyle:Apply()
