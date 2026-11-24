@@ -70,6 +70,20 @@ local SLIDER_WIDTH = CONTROL_WIDTH - VALUE_GUTTER
 -- wall.
 local ROW_SPACING = 4
 
+-- The same numbers, for the panel that opens beside the dialog. It builds its
+-- rows from the same Blizzard templates, and reading the grid from here rather
+-- than restating it is what keeps a label in the panel starting at the same x
+-- as a label in the dialog.
+EditModeStyle.Metrics = {
+    labelWidth = LABEL_WIDTH,
+    controlWidth = CONTROL_WIDTH,
+    gap = GAP,
+    rowWidth = ROW_WIDTH,
+    rowHeight = ROW_HEIGHT,
+    rowSpacing = ROW_SPACING,
+    sliderWidth = SLIDER_WIDTH,
+}
+
 --------------------------------------------------------------------------------
 -- Per-widget layout
 --------------------------------------------------------------------------------
