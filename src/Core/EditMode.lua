@@ -323,6 +323,8 @@ end
 --   onEnter / onExit   f(frame)
 --   onLayout           f(frame, layoutName, layoutIndex)
 --   buttons            list of { text, click }, added after the group buttons
+--   snap               false to keep this frame from snapping when dragged; it
+--                      is still something other frames can snap to
 function EditMode.Register(_, spec)
     if not EditMode.available then return nil end
     if not spec or not spec.frame or not spec.schema then return nil end
@@ -349,6 +351,12 @@ function EditMode.Register(_, spec)
     end, default, spec.name)
 
     LibEditMode:AddFrameSettings(spec.frame, BuildSettings(registration))
+
+    -- Every frame in the collection lines up with every other, and with
+    -- Blizzard's, without the addon asking.
+    if spec.snap ~= false and PeaversCommons.EditModeSnap then
+        PeaversCommons.EditModeSnap:Attach(spec.frame)
+    end
 
     -- The dialog is built by the first AddFrame, so this is the earliest the
     -- panel can be told what to anchor itself to.
