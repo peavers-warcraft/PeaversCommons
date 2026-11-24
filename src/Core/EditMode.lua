@@ -80,6 +80,8 @@ local function OpenGroup(registration, section)
         entries = section.entries,
         selector = section.selector,
         anchorTo = dialog,
+        -- Absent for one of Blizzard's systems, which has no frame of ours.
+        avoid = registration.frame,
     })
 end
 
@@ -221,6 +223,77 @@ local function ClosePanelUnlessOwnedBy(key)
     end
 end
 
+--------------------------------------------------------------------------------
+-- Where the dialog opens
+--
+-- LibEditMode puts its dialog in one fixed spot near the bottom right of the
+-- screen every time a frame is selected, wherever that frame is. Blizzard's own
+-- dialog opens beside the frame it belongs to, and so does this one now: you
+-- click a frame and its settings are next to it, not a screen away.
+--------------------------------------------------------------------------------
+
+local DIALOG_GAP = 12
+
+-- Where a dialog of this size goes for a frame at `rect`. Plain numbers, in
+-- UIParent units from the bottom left, so it can be checked without a client
+-- (tests/editmode_panel.lua). Returns the dialog's left and top, or nil when
+-- there is nowhere sensible and the library's own spot should stand.
+function EditMode.PlaceDialog(rect, width, height, screenWidth, screenHeight, gap)
+    gap = gap or DIALOG_GAP
+
+    -- Beside the frame: to its right by preference, to its left when the right
+    -- has no room.
+    local left
+    if rect.right + gap + width <= screenWidth then
+        left = rect.right + gap
+    elseif rect.left - gap - width >= 0 then
+        left = rect.left - gap - width
+    end
+
+    if left then
+        -- Tops level, moved only as far as keeps the whole dialog on screen.
+        return left, math.min(math.max(rect.top, height), screenHeight)
+    end
+
+    -- Too wide to stand beside - a bar across the screen. Under it, or over it,
+    -- centred on it.
+    local centre = (rect.left + rect.right) / 2
+    left = math.min(math.max(centre - width / 2, 0), math.max(screenWidth - width, 0))
+
+    if rect.bottom - gap - height >= 0 then
+        return left, rect.bottom - gap
+    elseif rect.top + gap + height <= screenHeight then
+        return left, rect.top + gap + height
+    end
+
+    return nil
+end
+
+-- The frame the dialog was last stood beside. It is placed once per selection
+-- and then left alone: it does not chase the frame while that is dragged, and
+-- if the user moves it out of the way it stays moved until they select
+-- something else.
+local dialogBeside
+
+local function AnchorDialog(dialog, frame)
+    if not frame or frame == dialogBeside then return end
+
+    local Snap = PeaversCommons.EditModeSnap
+    local rect = Snap and Snap.RectOf and Snap.RectOf(frame)
+    if not rect then return end
+
+    local width, height = dialog:GetWidth(), dialog:GetHeight()
+    local screenWidth, screenHeight = UIParent:GetWidth(), UIParent:GetHeight()
+    if not (width and height and screenWidth and screenHeight) then return end
+
+    local left, top = EditMode.PlaceDialog(rect, width, height, screenWidth, screenHeight)
+    if not left then return end
+
+    dialogBeside = frame
+    dialog:ClearAllPoints()
+    dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+end
+
 local dialogHooked = false
 
 local function HookDialog()
@@ -230,14 +303,22 @@ local function HookDialog()
     if not dialog then return end
     dialogHooked = true
 
-    dialog:HookScript("OnHide", function() ClosePanelUnlessOwnedBy(nil) end)
+    dialog:HookScript("OnHide", function()
+        -- Closed and reopened on the same frame, it is placed afresh: the frame
+        -- may well have been dragged somewhere else in between.
+        dialogBeside = nil
+        ClosePanelUnlessOwnedBy(nil)
+    end)
 
     -- Update runs for a new selection and again each time the selected frame is
-    -- dropped, so it is the selection that is compared rather than the call.
+    -- dropped, so it is the selection that is compared rather than the call. It
+    -- lays the dialog out before returning, so by here its size is the size it
+    -- will be shown at.
     if type(dialog.Update) == "function" then
-        hooksecurefunc(dialog, "Update", function(_, selection)
+        hooksecurefunc(dialog, "Update", function(self, selection)
             local frame = selection and selection.parent
             ClosePanelUnlessOwnedBy(frame and tostring(frame) or nil)
+            AnchorDialog(self, frame)
         end)
     end
 end

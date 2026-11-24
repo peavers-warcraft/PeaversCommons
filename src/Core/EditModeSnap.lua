@@ -218,6 +218,9 @@ local function RectOf(region, into)
     return into
 end
 
+-- Also what EditMode uses to stand the dialog beside a frame.
+Snap.RectOf = RectOf
+
 -- The Snap box in the Edit Mode window. Asked rather than cached: it can be
 -- ticked while a frame is selected.
 local function IsEnabled()

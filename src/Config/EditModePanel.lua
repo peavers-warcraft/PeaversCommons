@@ -716,7 +716,22 @@ end
 -- no room - the Edit Mode dialog is itself draggable, so it can be anywhere.
 --------------------------------------------------------------------------------
 
-local function Anchor(panel, anchorTo)
+-- Whether the panel, hung off the right of the dialog, would sit on top of the
+-- frame being edited. The dialog stands beside that frame, so when it is on the
+-- frame's left its right-hand side is exactly where the frame is.
+local function WouldCover(panel, anchorTo, avoid, panelLeft)
+    local Snap = PeaversCommons.EditModeSnap
+    local rect = avoid and Snap and Snap.RectOf and Snap.RectOf(avoid)
+    local top = anchorTo:GetTop()
+    if not rect or not top then return false end
+
+    local bottom = top - (panel:GetHeight() or MAX_HEIGHT)
+
+    return rect.left < panelLeft + PANEL_WIDTH and rect.right > panelLeft
+        and rect.bottom < top and rect.top > bottom
+end
+
+local function Anchor(panel, anchorTo, avoid)
     panel:ClearAllPoints()
 
     if not anchorTo or not anchorTo:IsShown() then
@@ -724,9 +739,16 @@ local function Anchor(panel, anchorTo)
         return
     end
 
-    local right = anchorTo:GetRight()
+    local left, right = anchorTo:GetLeft(), anchorTo:GetRight()
     local edge = UIParent:GetRight()
     local fitsRight = right and edge and ((right + PANEL_GAP + PANEL_WIDTH) <= edge)
+    local fitsLeft = left and ((left - PANEL_GAP - PANEL_WIDTH) >= 0)
+
+    -- Settings are judged by looking at the frame, so the panel gives way to it
+    -- when it has somewhere else to go.
+    if fitsRight and fitsLeft and WouldCover(panel, anchorTo, avoid, right + PANEL_GAP) then
+        fitsRight = false
+    end
 
     if fitsRight then
         panel:SetPoint("TOPLEFT", anchorTo, "TOPRIGHT", PANEL_GAP, 0)
@@ -747,6 +769,7 @@ end
 --   selector  optional { label, values, default }: a dropdown above the group
 --             whose choice replaces the context
 --   anchorTo  the Edit Mode dialog this hangs off
+--   avoid     the frame being edited, which the panel keeps off when it can
 --   key       identifies the open group, so clicking it again closes it
 --   owner     identifies whose settings these are - a frame, or a system key -
 --             so the panel can be shut when something else is selected
@@ -768,7 +791,7 @@ function EditModePanel.Show(_, spec)
 
     panel.Title:SetText(spec.title or "")
     Render(panel, spec)
-    Anchor(panel, spec.anchorTo)
+    Anchor(panel, spec.anchorTo, spec.avoid)
     panel:Show()
 
     return true
@@ -781,7 +804,7 @@ function EditModePanel.Refresh(_)
     if not panel or not panel:IsShown() or not EditModePanel.spec then return end
 
     Render(panel, EditModePanel.spec)
-    Anchor(panel, EditModePanel.spec.anchorTo)
+    Anchor(panel, EditModePanel.spec.anchorTo, EditModePanel.spec.avoid)
 end
 
 function EditModePanel.Hide(_)
