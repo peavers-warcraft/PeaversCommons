@@ -57,6 +57,7 @@ src\Config\SettingsObjects.lua
 src\Config\ConfigMigration.lua
 src\Config\EditModeStyle.lua
 src\Config\EditModePanel.lua
+src\Core\EditModeSnap.lua
 src\Core\EditMode.lua
 
 src\Utils\Utils.lua
