@@ -116,6 +116,8 @@ function FrameMeta:GetHeight() return self.height end
 function FrameMeta:SetPoint(...) self.points[#self.points + 1] = { ... } end
 function FrameMeta:ClearAllPoints() self.points = {} end
 function FrameMeta:GetRight() return self.right end
+function FrameMeta:GetLeft() return self.left end
+function FrameMeta:GetTop() return self.top end
 function FrameMeta:GetScale() return self.scale end
 function FrameMeta:GetEffectiveScale() return self.scale end
 function FrameMeta:GetWidth() return self.width end
@@ -219,6 +221,7 @@ function lib:AddFrame(frame)
     if not self.internal.dialog then
         self.internal.dialog = NewFrame("Frame")
         self.internal.dialog.right = 600
+        self.internal.dialog.width, self.internal.dialog.height = 400, 300
         self.internal.dialog.Update = function(dialog, shown) dialog.selection = shown end
     end
 end
@@ -525,6 +528,41 @@ do
     Check("toggle: third click reopens", Panel:IsShown(), true)
 end
 
+-- The panel hangs off the dialog's right, unless that is where the frame is.
+do
+    local function Side()
+        local point = Panel.frame.points[#Panel.frame.points]
+        return point[1] == "TOPLEFT" and "right" or "left"
+    end
+
+    dialog.left, dialog.right, dialog.top = 900, 1300, 700
+    Panel.frame.height = 400
+
+    -- The frame is away to the left of the dialog: nothing in the way.
+    frameA.rect = { 600, 500, 200, 100 }
+    Panel:Refresh()
+    Check("panel side: right when clear", Side(), "right")
+
+    -- The dialog is on the frame's left, so its right is where the frame is.
+    frameA.rect = { 1312, 500, 200, 100 }
+    Panel:Refresh()
+    Check("panel side: gives way to the frame", Side(), "left")
+
+    -- Same columns, but well below the panel: not in the way after all.
+    frameA.rect = { 1312, 50, 200, 100 }
+    Panel:Refresh()
+    Check("panel side: only when it would actually cover it", Side(), "right")
+
+    -- No room on the left: it stays right rather than leave the screen.
+    dialog.left, dialog.right = 100, 500
+    frameA.rect = { 512, 500, 200, 100 }
+    Panel:Refresh()
+    Check("panel side: stays on screen", Side(), "right")
+
+    frameA.rect = nil
+    dialog.left, dialog.right, dialog.top = nil, 600, nil
+end
+
 -- The panel does not outlive the selection it belongs to.
 do
     dialog:Update(selectionA)
@@ -543,6 +581,76 @@ do
     lib.buttons[frameA][1].click()
     EditModeManagerFrame:SelectSystem(blizzardFrame)
     Check("owner: selecting a Blizzard frame closes it", Panel:IsShown(), false)
+end
+
+--------------------------------------------------------------------------------
+-- Where the dialog opens
+--------------------------------------------------------------------------------
+
+do
+    local W, H = 1920, 1080
+    local function Rect(left, bottom, width, height)
+        return { left = left, right = left + width, bottom = bottom, top = bottom + height }
+    end
+
+    -- Room on the right: beside the frame, tops level.
+    local left, top = EditMode.PlaceDialog(Rect(500, 500, 200, 100), 400, 300, W, H)
+    Check("place: right of the frame", left, 712)
+    Check("place: tops level", top, 600)
+
+    -- A frame against the right edge of the screen: to its left instead.
+    left = EditMode.PlaceDialog(Rect(1700, 500, 200, 100), 400, 300, W, H)
+    Check("place: flips to the left", left, 1288)
+
+    -- A frame near the bottom: the dialog is lifted so that none of it is cut off.
+    left, top = EditMode.PlaceDialog(Rect(500, 20, 200, 100), 400, 300, W, H)
+    Check("place: lifted clear of the bottom", top, 300)
+
+    -- A bar the width of the screen has no beside: under it, centred.
+    left, top = EditMode.PlaceDialog(Rect(100, 800, 1720, 40), 400, 300, W, H)
+    Check("place: centred under a wide frame", left, 760)
+    Check("place: below a wide frame", top, 788)
+
+    -- The same bar at the bottom of the screen: over it.
+    left, top = EditMode.PlaceDialog(Rect(100, 40, 1720, 40), 400, 300, W, H)
+    Check("place: above a wide frame at the bottom", top, 392)
+
+    -- A frame that fills the screen leaves nowhere, and says so.
+    left = EditMode.PlaceDialog(Rect(0, 0, 1920, 1080), 400, 300, W, H)
+    Check("place: nowhere to go", left, nil)
+
+    -- In place, through the hook. A frame is selected and the dialog stands
+    -- beside it.
+    frameA.rect = { 500, 500, 200, 100 }
+    frameB.rect = { 1700, 200, 200, 100 }
+    dialog:Hide()
+    dialog:Show()
+
+    dialog:Update(selectionA)
+    local point = dialog.points[#dialog.points]
+    Check("dialog: anchored by its top left", point[1], "TOPLEFT")
+    Check("dialog: beside the selected frame", point[4], 712)
+    Check("dialog: level with its top", point[5], 600)
+
+    -- Dragged out of the way, then the frame is dropped: it stays where it
+    -- was put.
+    dialog:ClearAllPoints()
+    dialog:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    dialog:Update(selectionA)
+    Check("dialog: left alone for the same frame", dialog.points[#dialog.points][1], "CENTER")
+
+    -- Another frame is selected: it goes to that one.
+    dialog:Update(selectionB)
+    point = dialog.points[#dialog.points]
+    Check("dialog: follows the selection", point[4], 1288)
+    Check("dialog: one anchor, not two", #dialog.points, 1)
+
+    -- Closed and reopened on the same frame, it is placed again.
+    dialog:Hide()
+    dialog:Show()
+    dialog:ClearAllPoints()
+    dialog:Update(selectionB)
+    Check("dialog: placed again after closing", #dialog.points, 1)
 end
 
 --------------------------------------------------------------------------------
